@@ -45,7 +45,7 @@ with their exact definition files (`agents/*.md`) and models; see the README not
 - **Small eval.** 6 bugs + 3 decoys on one ticket. 100% here doesn't predict 100% on an unseen branch; the next
   step is more decoys that look like real bugs (the hard case for precision).
 
-## Live run with the installed plugin (Claude Code 2.1.330)
+## Live run of the plugin (Claude Code 2.1.330)
 `claude -p "/ticket-to-merge:review-pr main" --plugin-dir ./ticket-to-merge` on `eval/planted-bugs`:
 - **First run: returned `[]` (review blocked itself).** The skill's read-only pathspec `':(exclude)ticket-to-merge/**'`
   tripped the guardrail's glob rule. Fixed in `protect.mjs` (protected-file globs only block commands that write;

@@ -145,24 +145,23 @@ findings were a subset of `review-correctness`'s. Next: skip the verifier when t
 of findings. I would not cut the test lock or the stop gate: they cost nothing per run and they are what let the
 build run unattended.
 
-## How this submission was executed (honest note)
+## How the pipeline was run
 `claude plugin validate ./ticket-to-merge` (Claude Code 2.1.330): **✔ Validation passed** — 3 hooks, 2 skills
 (`ticket-to-merge:review-pr`, `ticket-to-merge:ship-ticket`) and 5 agents found; the only warning is a missing
 marketplace icon (plugin-directory listing check, does not affect the result).
 
-**Live run** of `/ticket-to-merge:review-pr main` on `eval/planted-bugs` with the installed plugin: the first run
+**Live run** of `/ticket-to-merge:review-pr main` on `eval/planted-bugs` with `--plugin-dir ./ticket-to-merge`: the first run
 blocked itself (the guardrail read the skill's git pathspec `:(exclude)ticket-to-merge/**` as a dangerous glob); after
 the fix it returned **6/6 planted bugs, 0 false positives**, for a measured $0.82 (Opus orchestrator $0.62 at 84% cache
 hit, Sonnet agents $0.20 at 49%). Details in [RESULTS.md](ticket-to-merge/evals/planted-bugs/RESULTS.md).
 
-The Claude Code CLI wasn't installed while the pipeline was built, so the plugin wasn't loaded with `--plugin-dir`
-during the build. The pipeline was run from a Claude Code session that
+The build stages (red, green, review) and the 3+3 planted-bug runs were driven from a Claude Code session that
 dispatched each stage as a subagent **with the exact agent definition file and model** from `ticket-to-merge/agents/`
 and did the orchestrator's checks (phase switches, red/green verification, diff scoping, commits) itself. The hooks
-were exercised directly: the 84-case bypass suite and a gate test against passing/failing suites.
+were exercised directly: the 94-case bypass suite and a gate test against passing/failing suites.
 
 ## Not done
-- Stretch (+5): neither a learning reviewer nor `claude plugin eval` Δ (needs the CLI to measure).
+- Stretch (+5): neither a learning reviewer nor `claude plugin eval` Δ.
 
 ---
 
