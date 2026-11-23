@@ -183,8 +183,9 @@ of findings. I would not cut the test lock or the stop gate: they cost nothing p
 build run unattended.
 
 ## How the pipeline was run
-`claude plugin validate ./ticket-to-merge` (Claude Code 2.1.330): **✔ Validation passed** — 3 hooks, 2 skills
-(`ticket-to-merge:review-pr`, `ticket-to-merge:ship-ticket`) and 5 agents found; the only warning is a missing
+`claude plugin validate ./ticket-to-merge` (Claude Code 2.1.330): **✔ Validation passed** — 6 hook entries
+(SessionStart, PreToolUse, PostToolUse, Stop ×2, SubagentStop), 2 skills (`ticket-to-merge:review-pr`,
+`ticket-to-merge:ship-ticket`) and 5 agents found; the only warning is a missing
 marketplace icon (plugin-directory listing check, does not affect the result).
 
 **Live run** of `/ticket-to-merge:review-pr main` on `eval/planted-bugs` with `--plugin-dir ./ticket-to-merge`: the first run
