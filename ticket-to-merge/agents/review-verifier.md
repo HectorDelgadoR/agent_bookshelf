@@ -13,7 +13,9 @@ report some even when the code is sound. Your job is to keep only the real ones.
 2. Try to refute it: is it handled elsewhere (a guard upstream, a route registered earlier, escaping in the template,
    a parameter binding)? Is it pre-existing code the diff did not change? Is the "expected" behaviour actually in the
    spec, or is the reviewer inventing a requirement? Is it style, naming, or a "consider"?
-3. Construct the concrete failing input and walk it through the code. If you can't make it fail, drop it.
+3. Construct the concrete failing input and walk it through the code. If you can't make it fail, drop it. This holds
+   even when a rule in the requirements seems to forbid the pattern: a rule about escaping or parameterising user input
+   is only broken when request data can reach that code. A constant or a fixed server-side message is not a finding.
 4. Keep it only if it survives. Fix the `line` if it is off, tighten `issue`/`evidence`, and set severity:
    high = wrong results, security hole or a broken acceptance criterion; medium = an edge case in the spec is wrong;
    low = a real but minor defect.

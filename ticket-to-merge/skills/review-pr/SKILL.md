@@ -29,7 +29,10 @@ pre-approved `allowed-tools` patterns from matching). Write the base ref literal
 
 ## 3. Run the specialists in parallel
 Launch both in ONE message, each with the full diff, the changed-file list and the requirements text pasted
-into its prompt (the reviewers have no Bash, so they can't fetch the diff themselves):
+into its prompt (the reviewers have no Bash, so they can't fetch the diff themselves). If the diff is too long to paste
+whole, paste the source changes and give the **full changed-file list**, and tell both reviewers explicitly to Read
+every changed file that isn't pasted, test files included. Tell `review-correctness` to read every changed file under
+`tests/` (and any `*.test.*` / `*.spec.*`) in full: a weakened test is a finding.
 - `ticket-to-merge:review-security`
 - `ticket-to-merge:review-correctness`
 

@@ -21,5 +21,8 @@ The search UI exists in `src/views/books/index.ejs` (HTMX `hx-get="/books/search
   internal consistency and the criteria above; don't require a specific path or message.
 - Express route order matters: a `/books/search` route registered after `/books/:id` is never reached.
 - SQLite `LIKE` is case-insensitive for ASCII; `GLOB`, `=` and `instr()` are case-sensitive.
-- HTML fragments returned to HTMX must escape user input (EJS `<%= %>`, not `<%- %>`, and no raw interpolation into
-  `res.send` strings).
+- HTML fragments returned to HTMX must escape **user-controlled** values (EJS `<%= %>`, not `<%- %>`; no request data
+  interpolated raw into `res.send` strings). Interpolating a constant or a fixed server-side message (for example an
+  error class's own message text) is not a defect unless request data can reach it.
+- Tests are part of the deliverable (AC5): a changed test that can no longer fail (it asserts only that a value exists or
+  has some type, or it is skipped) is a defect even when the code it covers is correct.

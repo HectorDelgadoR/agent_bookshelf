@@ -19,7 +19,8 @@ You cannot edit anything.
    results unordered when the spec orders them; errors swallowed or thrown as 500.
 3. Check the code paths the diff changes for ordinary bugs: wrong variable, inverted condition, unreachable branch,
    mutating shared state, async/await misuse, missing `return` after sending a response.
-4. Tests in the diff: every criterion has a test that would FAIL if the behaviour broke. Flag tests that assert
+4. Tests in the diff: Read every changed test file in full, even if the diff you were given only covers source files.
+   Every criterion has a test that would FAIL if the behaviour broke. Flag tests that assert
    nothing meaningful, are skipped (`it.skip`, `.only`, `xit`), assert the bug as expected behaviour, or don't
    exercise the surface they name.
 
