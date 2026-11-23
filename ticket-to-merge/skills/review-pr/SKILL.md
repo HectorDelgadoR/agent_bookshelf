@@ -12,6 +12,8 @@ Arguments: `$ARGUMENTS`
 ## 1. Get the diff
 Run each git command as its own Bash call: no `&&`, `||`, `;`, pipes, `$(...)` or shell variables (they stop the
 pre-approved `allowed-tools` patterns from matching). Write the base ref literally into each command.
+- A saved diff file named by the user (or found next to a request like "the diff is in CHANGES.diff"), or no git
+  available → Read that file and use it as the diff; the changed files are the ones it names. Skip the git steps.
 - A number → `gh pr diff <n>` (if `gh` is unavailable, say so and fall back to the branch diff).
 - A ref → use it as `<base>`.
 - Nothing → `git merge-base HEAD origin/main`; if that fails, `git merge-base HEAD main`; then `git merge-base HEAD master`.
