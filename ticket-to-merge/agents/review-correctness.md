@@ -19,7 +19,12 @@ You cannot edit anything.
    results unordered when the spec orders them; errors swallowed or thrown as 500.
 3. Check the code paths the diff changes for ordinary bugs: wrong variable, inverted condition, unreachable branch,
    mutating shared state, async/await misuse, missing `return` after sending a response.
-4. Tests in the diff: Read every changed test file in full, even if the diff you were given only covers source files.
+4. Follow each changed endpoint to its consumer: find who calls it (templates, `hx-*` attributes, front-end scripts,
+   other routes) and read that code. Does the user actually get the result, including on error paths? Check what the
+   client library does with each status code the endpoint can return; for example, a fragment sent with a 4xx status
+   is not swapped into the page by default in libraries like HTMX, so an error the spec wants shown is never seen.
+   Tests that call the endpoint directly can't catch this, so a passing suite is not evidence here.
+5. Tests in the diff: Read every changed test file in full, even if the diff you were given only covers source files.
    Every criterion has a test that would FAIL if the behaviour broke. Flag tests that assert
    nothing meaningful, are skipped (`it.skip`, `.only`, `xit`), assert the bug as expected behaviour, or don't
    exercise the surface they name.

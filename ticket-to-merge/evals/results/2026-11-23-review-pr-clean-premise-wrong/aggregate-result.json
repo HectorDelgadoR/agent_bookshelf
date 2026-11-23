@@ -1,0 +1,328 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.330",
+  "startedAt": "2026-11-23T17:41:55.297Z",
+  "durationSeconds": 385,
+  "costUsd": 2.6052605,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Users\\hecto\\OneDrive\\Documents\\bla\\capstone-project\\agent_bookshelf\\ticket-to-merge",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "review-pr-clean",
+    "threshold": 1,
+    "concurrency": 1,
+    "plugins": [
+      {
+        "name": "ticket-to-merge",
+        "version": "1.0.0",
+        "path": "C:\\Users\\hecto\\OneDrive\\Documents\\bla\\capstone-project\\agent_bookshelf\\ticket-to-merge"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "review-pr-clean",
+      "dir": "evals\\review-pr-clean",
+      "source": "mixed",
+      "promptMarkdown": "This folder is a pull request for ticket BOOK-101; the ticket is in TICKET.md and the full diff of the branch against main is in CHANGES.diff. Review the pull request before it's merged: list every defect you find as a JSON array of {file, line, severity, issue, evidence}, and don't list things that aren't real defects.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 900,
+      "maxTurns": 40,
+      "graders": [
+        {
+          "name": "no-false-defects",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "This pull request implements the ticket correctly and has no defects: SPEC.md (part of the PR) defines the interface and lists Unicode case folding beyond ASCII as out of scope. PASS if the response reports no defects: an empty findings list, or only items it explicitly marks as optional, non-blocking suggestions or notes. FAIL if it lists one or more items as defects or findings to fix (any severity, including low).",
+          "config": {
+            "criteria": "This pull request implements the ticket correctly and has no defects: SPEC.md (part of the PR) defines the interface and lists Unicode case folding beyond ASCII as out of scope. PASS if the response reports no defects: an empty findings list, or only items it explicitly marks as optional, non-blocking suggestions or notes. FAIL if it lists one or more items as defects or findings to fix (any severity, including low).",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "verdict-mergeable",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "PASS if the response concludes that the pull request can be merged (ready to merge, approved, no blocking issues, or equivalent). FAIL if it says the pull request should not be merged or needs changes first.",
+          "config": {
+            "criteria": "PASS if the response concludes that the pull request can be merged (ready to merge, approved, no blocking issues, or equivalent). FAIL if it says the pull request should not be merged or needs changes first.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.5002883000000001,
+            "judgeCostUsd": 0.008862,
+            "durationSeconds": 60,
+            "startedAt": "2026-11-23T17:41:55.379Z",
+            "error": null,
+            "tracePath": "C:\\Users\\hecto\\AppData\\Local\\Temp\\claude-eval-jc8rx6\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-false-defects",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I found no defects in this pull request, so the result is an empty array.\n\n```json\n[]\n```\n\n| severity | file:line | issue |\n|---|---|---|\n| — | — | no defects found |\n\nNeither reviewer found anything, so I didn't run the verification step. Both reviewers only read the code; nobody ran `npm run test:run` or `npx tsc --noEmit`, so the \"tests pass\" requirement in the ticket is still unconfirmed.\n\nWhat was checked against `SPEC.md` and the seed data:\n- **SQL safety:** the search query passes user input as bound parameters, never pasted into the SQL. The special search characters `%`, `_` and `\\` are escaped so they match literally.\n- **Web page output:** the new search-results page escapes every user and database value. The one hand-built error message only ever shows the two fixed validation messages, never user input.\n- **Input checks:** the query is trimmed before the 100-character limit is checked, and exactly 100 is allowed. A repeated or non-text `q` returns a 400 error, and an empty query returns all books.\n- **Routes:** `/books/search` is registered before `/books/:id`, so \"search\" isn't read as a book id. `GET /api/books` only behaves differently when `q` is present.\n- **Tests:** the expected results in the new tests match the seed data. Each test uses its own temporary database, and the rewrite doesn't break any existing tests.\n\nReviewed 11 files against SPEC.md: 0 findings (0 candidates, 0 dropped by the verifier)."
+              },
+              {
+                "name": "verdict-mergeable",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I found no defects in this pull request, so the result is an empty array.\n\n```json\n[]\n```\n\n| severity | file:line | issue |\n|---|---|---|\n| — | — | no defects found |\n\nNeither reviewer found anything, so I didn't run the verification step. Both reviewers only read the code; nobody ran `npm run test:run` or `npx tsc --noEmit`, so the \"tests pass\" requirement in the ticket is still unconfirmed.\n\nWhat was checked against `SPEC.md` and the seed data:\n- **SQL safety:** the search query passes user input as bound parameters, never pasted into the SQL. The special search characters `%`, `_` and `\\` are escaped so they match literally.\n- **Web page output:** the new search-results page escapes every user and database value. The one hand-built error message only ever shows the two fixed validation messages, never user input.\n- **Input checks:** the query is trimmed before the 100-character limit is checked, and exactly 100 is allowed. A repeated or non-text `q` returns a 400 error, and an empty query returns all books.\n- **Routes:** `/books/search` is registered before `/books/:id`, so \"search\" isn't read as a book id. `GET /api/books` only behaves differently when `q` is present.\n- **Tests:** the expected results in the new tests match the seed data. Each test uses its own temporary database, and the rewrite doesn't break any existing tests.\n\nReviewed 11 files against SPEC.md: 0 findings (0 candidates, 0 dropped by the verifier)."
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.4385869,
+            "judgeCostUsd": 0.010110000000000003,
+            "durationSeconds": 65,
+            "startedAt": "2026-11-23T17:42:55.459Z",
+            "error": null,
+            "tracePath": "C:\\Users\\hecto\\AppData\\Local\\Temp\\claude-eval-YFTQvx\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-false-defects",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "```json\n[]\n```\n\nI found no defects in this PR.\n\n| severity | file:line | issue |\n|---|---|---|\n| — | — | no findings |\n\n**SQL injection:** the search query in `src/models/book.ts` is a fixed string. The user's input only reaches it as two `?` parameters. Before that, `\\`, `%` and `_` in the input are escaped, and the query declares `\\` as its escape character, so those characters are matched literally rather than as wildcards.\n\n**Input validation:** checks whether the value is missing or isn't a string, and checks the length after trimming. Exactly 100 characters is allowed; 101 or more is rejected. Repeated `q` parameters get a 400, not a crash. `/api/books?q=` and `/api/books/search` go through the same handler, and both `/books/search` routes are registered before `/books/:id`.\n\n**XSS:** the new search-results template escapes every value it outputs. The one raw error message in `src/routes/books.ts` only ever contains fixed text, never user input.\n\n**Spec and tests:** the code matches every acceptance criterion and the interface in `SPEC.md`, and each criterion has tests at the model, JSON API and HTML level. No files outside the spec's list were changed apart from docs and project config.\n\nNeither I nor the reviewers ran `npm run test:run` or `npx tsc --noEmit`, so whether the tests pass hasn't been checked. Run both before merging.\n\nThe safety filter flagged one reviewer's report because it mentioned `.claude/settings.json`. That was only the reviewer describing the file, which this PR creates with only deny rules (it blocks access to things like `.env`, the database and `seed.sql`). There was nothing to act on.\n\nReviewed 11 files against SPEC.md: 0 findings (0 candidates, 0 dropped by the verifier)."
+              },
+              {
+                "name": "verdict-mergeable",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "```json\n[]\n```\n\nI found no defects in this PR.\n\n| severity | file:line | issue |\n|---|---|---|\n| — | — | no findings |\n\n**SQL injection:** the search query in `src/models/book.ts` is a fixed string. The user's input only reaches it as two `?` parameters. Before that, `\\`, `%` and `_` in the input are escaped, and the query declares `\\` as its escape character, so those characters are matched literally rather than as wildcards.\n\n**Input validation:** checks whether the value is missing or isn't a string, and checks the length after trimming. Exactly 100 characters is allowed; 101 or more is rejected. Repeated `q` parameters get a 400, not a crash. `/api/books?q=` and `/api/books/search` go through the same handler, and both `/books/search` routes are registered before `/books/:id`.\n\n**XSS:** the new search-results template escapes every value it outputs. The one raw error message in `src/routes/books.ts` only ever contains fixed text, never user input.\n\n**Spec and tests:** the code matches every acceptance criterion and the interface in `SPEC.md`, and each criterion has tests at the model, JSON API and HTML level. No files outside the spec's list were changed apart from docs and project config.\n\nNeither I nor the reviewers ran `npm run test:run` or `npx tsc --noEmit`, so whether the tests pass hasn't been checked. Run both before merging.\n\nThe safety filter flagged one reviewer's report because it mentioned `.claude/settings.json`. That was only the reviewer describing the file, which this PR creates with only deny rules (it blocks access to things like `.env`, the database and `seed.sql`). There was nothing to act on.\n\nReviewed 11 files against SPEC.md: 0 findings (0 candidates, 0 dropped by the verifier)."
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.4527383000000001,
+            "judgeCostUsd": 0.010446000000000007,
+            "durationSeconds": 58,
+            "startedAt": "2026-11-23T17:44:00.371Z",
+            "error": null,
+            "tracePath": "C:\\Users\\hecto\\AppData\\Local\\Temp\\claude-eval-KGOop9\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-false-defects",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "```json\n[]\n```\n\n| Severity | File:line | Issue |\n|---|---|---|\n| — | — | No defects found |\n\nReviewed 11 files against SPEC.md: 0 findings (0 candidates, 0 dropped by the verifier).\n\nThe PR looks ready to merge. Neither reviewer found a problem, so the step that double-checks findings had nothing to check.\n\n- **Requirements used:** I reviewed against `SPEC.md`, the spec for BOOK-101 at the repo root, not just `TICKET.md`. It covers the same acceptance criteria and also defines the endpoints, error messages and response shapes.\n- **SQL:** user input goes into the query as parameters. `%`, `_` and `\\` are escaped to match the `ESCAPE '\\'` clause.\n- **Validation:** input is trimmed before the 100-character check, so exactly 100 characters is allowed. Repeated `?q=` parameters return a 400 on both the JSON and HTML routes.\n- **Routing:** `/books/search` is registered before `/books/:id` in both routers.\n- **HTML escaping:** the results template escapes every value. The 400 HTML response inserts the error message without escaping, but that message never contains user input.\n- **Tests:** the three test files under `tests/search/` check each acceptance criterion with specific assertions. The test data they rely on (Dune, the two Andy Weir books, the \"martin\" authors) exists in `seed.sql`.\n\nWhat this review didn't cover:\n- Nobody ran `npm run test:run` or `npx tsc --noEmit`. This was a read-only review, so the \"tests pass\" criterion hasn't been confirmed.\n- The security reviewer read `SPEC.md` and the four source files but not the tests or `.claude/settings.json`. The correctness reviewer read the tests in full. The new `.claude/settings.json` only adds deny rules, which can't expose anything."
+              },
+              {
+                "name": "verdict-mergeable",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "```json\n[]\n```\n\n| Severity | File:line | Issue |\n|---|---|---|\n| — | — | No defects found |\n\nReviewed 11 files against SPEC.md: 0 findings (0 candidates, 0 dropped by the verifier).\n\nThe PR looks ready to merge. Neither reviewer found a problem, so the step that double-checks findings had nothing to check.\n\n- **Requirements used:** I reviewed against `SPEC.md`, the spec for BOOK-101 at the repo root, not just `TICKET.md`. It covers the same acceptance criteria and also defines the endpoints, error messages and response shapes.\n- **SQL:** user input goes into the query as parameters. `%`, `_` and `\\` are escaped to match the `ESCAPE '\\'` clause.\n- **Validation:** input is trimmed before the 100-character check, so exactly 100 characters is allowed. Repeated `?q=` parameters return a 400 on both the JSON and HTML routes.\n- **Routing:** `/books/search` is registered before `/books/:id` in both routers.\n- **HTML escaping:** the results template escapes every value. The 400 HTML response inserts the error message without escaping, but that message never contains user input.\n- **Tests:** the three test files under `tests/search/` check each acceptance criterion with specific assertions. The test data they rely on (Dune, the two Andy Weir books, the \"martin\" authors) exists in `seed.sql`.\n\nWhat this review didn't cover:\n- Nobody ran `npm run test:run` or `npx tsc --noEmit`. This was a read-only review, so the \"tests pass\" criterion hasn't been confirmed.\n- The security reviewer read `SPEC.md` and the four source files but not the tests or `.claude/settings.json`. The correctness reviewer read the tests in full. The new `.claude/settings.json` only adds deny rules, which can't expose anything."
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 14,
+            "costUsd": 0.4178786,
+            "judgeCostUsd": 0.014142000000000012,
+            "durationSeconds": 70,
+            "startedAt": "2026-11-23T17:44:58.865Z",
+            "error": null,
+            "tracePath": "C:\\Users\\hecto\\AppData\\Local\\Temp\\claude-eval-5VE8wu\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-false-defects",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "```json\n[\n  {\n    \"file\": \"src/routes/books.ts\",\n    \"line\": 19,\n    \"severity\": \"medium\",\n    \"issue\": \"The HTML search box never shows the validation error. The route replies with HTTP 400, and htmx 1.x does not swap 4xx responses into the page by default. So when a query is over 100 characters or `q` is sent more than once, the `<p class=\\\"error\\\">…</p>` fragment is thrown away, `#search-results` keeps the old results, and the user sees no message. That defeats the purpose of the error fragment for AC3 in the UI.\",\n    \"evidence\": \"`return res.status(400).send(`<p class=\\\"error\\\">${err.message}</p>`);` — package.json pins `\\\"htmx.org\\\": \\\"^1.9.12\\\"`. In htmx 1.x, error responses fire `htmx:responseError` and are not swapped unless a `htmx:beforeSwap` handler or `hx-` setting turns it on. Nothing in src/views or src/public changes this: grep for `beforeSwap|responseHandling` finds no matches. `src/views/books/index.ejs:11-13` targets `#search-results` with no error handling. The tests only check the status code and body with supertest, so they can't catch this.\"\n  }\n]\n```\n\nI found one defect. The fix can go either way:\n- Return the error fragment with a 200 status.\n- Or keep the 400 (SPEC.md requires it) and add a small `htmx:beforeSwap` handler that sets `shouldSwap = true` for 400 responses on `#search-results`.\n\nBecause the spec explicitly requires 400, deciding which way to go may mean changing the spec.\n\nThe rest of the branch holds up:\n- **Parameterised SQL:** the search query uses `?` placeholders for every user value.\n- **Wildcard escaping:** `%`, `_` and `\\` are escaped correctly, and `ESCAPE '\\'` reaches SQLite intact.\n- **Route order:** `/books/search` is registered before `/books/:id` in both routers.\n- **Validation:** trimming happens before the 100-character check, and `null`/`undefined`/array inputs follow the spec.\n- **HTML escaping:** the template escapes everything with `<%= %>`, and the one string-built 400 fragment only contains fixed messages.\n- **Test data:** I checked every expected title in the tests against `seed.sql` (Hunt, Herbert, Weir, Le Guin, the four \"martin\" matches, Ender's) and they all match.\n\nI didn't run the test suite or `tsc`; this review comes from reading the code.\n\nOne thing outside the PR: `bookshelf.db-shm` and `bookshelf.db-wal` are in the working tree, and `.gitignore` only ignores `*.db`. That isn't part of this diff, so I left it out of the list."
+              },
+              {
+                "name": "verdict-mergeable",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "```json\n[\n  {\n    \"file\": \"src/routes/books.ts\",\n    \"line\": 19,\n    \"severity\": \"medium\",\n    \"issue\": \"The HTML search box never shows the validation error. The route replies with HTTP 400, and htmx 1.x does not swap 4xx responses into the page by default. So when a query is over 100 characters or `q` is sent more than once, the `<p class=\\\"error\\\">…</p>` fragment is thrown away, `#search-results` keeps the old results, and the user sees no message. That defeats the purpose of the error fragment for AC3 in the UI.\",\n    \"evidence\": \"`return res.status(400).send(`<p class=\\\"error\\\">${err.message}</p>`);` — package.json pins `\\\"htmx.org\\\": \\\"^1.9.12\\\"`. In htmx 1.x, error responses fire `htmx:responseError` and are not swapped unless a `htmx:beforeSwap` handler or `hx-` setting turns it on. Nothing in src/views or src/public changes this: grep for `beforeSwap|responseHandling` finds no matches. `src/views/books/index.ejs:11-13` targets `#search-results` with no error handling. The tests only check the status code and body with supertest, so they can't catch this.\"\n  }\n]\n```\n\nI found one defect. The fix can go either way:\n- Return the error fragment with a 200 status.\n- Or keep the 400 (SPEC.md requires it) and add a small `htmx:beforeSwap` handler that sets `shouldSwap = true` for 400 responses on `#search-results`.\n\nBecause the spec explicitly requires 400, deciding which way to go may mean changing the spec.\n\nThe rest of the branch holds up:\n- **Parameterised SQL:** the search query uses `?` placeholders for every user value.\n- **Wildcard escaping:** `%`, `_` and `\\` are escaped correctly, and `ESCAPE '\\'` reaches SQLite intact.\n- **Route order:** `/books/search` is registered before `/books/:id` in both routers.\n- **Validation:** trimming happens before the 100-character check, and `null`/`undefined`/array inputs follow the spec.\n- **HTML escaping:** the template escapes everything with `<%= %>`, and the one string-built 400 fragment only contains fixed messages.\n- **Test data:** I checked every expected title in the tests against `seed.sql` (Hunt, Herbert, Weir, Le Guin, the four \"martin\" matches, Ender's) and they all match.\n\nI didn't run the test suite or `tsc`; this review comes from reading the code.\n\nOne thing outside the PR: `bookshelf.db-shm` and `bookshelf.db-wal` are in the working tree, and `.gitignore` only ignores `*.db`. That isn't part of this diff, so I left it out of the list."
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 11,
+            "costUsd": 0.35119680000000003,
+            "judgeCostUsd": 0.01611,
+            "durationSeconds": 56,
+            "startedAt": "2026-11-23T17:46:09.079Z",
+            "error": null,
+            "tracePath": "C:\\Users\\hecto\\AppData\\Local\\Temp\\claude-eval-PS7JGm\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-false-defects",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "I read the diff, the ticket, `SPEC.md` and the surrounding code (`server.ts`, `db/index.ts`, `index.ejs`, `seed.sql`, `package.json`). I found one real defect and one minor one:\n\n```json\n[\n  {\n    \"file\": \"src/routes/books.ts\",\n    \"line\": 290,\n    \"severity\": \"medium\",\n    \"issue\": \"Users never see the validation error in the search box. The route returns the error fragment with HTTP 400, but this app uses htmx 1.9, which by default does not swap 4xx/5xx responses into the page. It fires htmx:responseError and leaves #search-results unchanged. If a user types more than 100 characters, the page keeps showing the old results with no error message. AC3 asks for a validation error, and SPEC says the fragment is 'swapped into #search-results', but that never happens in the UI.\",\n    \"evidence\": \"package.json: \\\"htmx.org\\\": \\\"^1.9.12\\\"; src/views/books/index.ejs:11-13 uses hx-get=\\\"/books/search\\\" hx-target=\\\"#search-results\\\" with no hx-swap override; there is no htmx:beforeSwap handler or htmx.config.responseHandling anywhere in src/views or src/public; books.ts:290 `return res.status(400).send(`<p class=\\\"error\\\">${err.message}</p>`)`. The supertest tests only check the raw 400 body, so they can't catch this. Fix: either return 200 with the error fragment for HTMX requests (HX-Request header), or add an htmx:beforeSwap handler that sets detail.shouldSwap = true for status 400.\"\n  },\n  {\n    \"file\": \"src/models/book.ts\",\n    \"line\": 193,\n    \"severity\": \"low\",\n    \"issue\": \"The length limit counts UTF-16 code units, not characters. `String.prototype.length` counts each emoji or other character outside the Basic Multilingual Plane (astral-plane character) as 2, so a query of 51–100 such characters is rejected as 'over 100 characters' even though the ticket allows up to 100 characters.\",\n    \"evidence\": \"`if (trimmed.length > MAX_SEARCH_QUERY_LENGTH)` — e.g. '😀'.repeat(60).length === 120, so 60 characters gets a 400 'Search query must be 100 characters or fewer'. Using `[...trimmed].length` would count code points instead.\"\n  }\n]\n```\n\nI didn't run the tests. The test expectations do match the seed data (Andy Weir, the \"martin\" set, \"Hunt\", Ender's Game).\n\nThese all check out and aren't defects:\n- **SQL:** all queries use parameters. The `LIKE ... ESCAPE '\\'` escaping of `\\`, `%` and `_` is correct.\n- **XSS:** the search view escapes everything with `<%= %>`. The 400 fragment only interpolates a constant message, not user input.\n- **Routing:** `/books/search` is registered before `/books/:id` in both routers.\n- **The `?q=` alias on `GET /api/books`:** `SPEC.md` asks for it, and without `q` the endpoint behaves exactly as before.\n- **Constraints:** the diff doesn't touch the schema, dependencies, `seed.sql`, `.env` or `bookshelf.db`."
+              },
+              {
+                "name": "verdict-mergeable",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "I read the diff, the ticket, `SPEC.md` and the surrounding code (`server.ts`, `db/index.ts`, `index.ejs`, `seed.sql`, `package.json`). I found one real defect and one minor one:\n\n```json\n[\n  {\n    \"file\": \"src/routes/books.ts\",\n    \"line\": 290,\n    \"severity\": \"medium\",\n    \"issue\": \"Users never see the validation error in the search box. The route returns the error fragment with HTTP 400, but this app uses htmx 1.9, which by default does not swap 4xx/5xx responses into the page. It fires htmx:responseError and leaves #search-results unchanged. If a user types more than 100 characters, the page keeps showing the old results with no error message. AC3 asks for a validation error, and SPEC says the fragment is 'swapped into #search-results', but that never happens in the UI.\",\n    \"evidence\": \"package.json: \\\"htmx.org\\\": \\\"^1.9.12\\\"; src/views/books/index.ejs:11-13 uses hx-get=\\\"/books/search\\\" hx-target=\\\"#search-results\\\" with no hx-swap override; there is no htmx:beforeSwap handler or htmx.config.responseHandling anywhere in src/views or src/public; books.ts:290 `return res.status(400).send(`<p class=\\\"error\\\">${err.message}</p>`)`. The supertest tests only check the raw 400 body, so they can't catch this. Fix: either return 200 with the error fragment for HTMX requests (HX-Request header), or add an htmx:beforeSwap handler that sets detail.shouldSwap = true for status 400.\"\n  },\n  {\n    \"file\": \"src/models/book.ts\",\n    \"line\": 193,\n    \"severity\": \"low\",\n    \"issue\": \"The length limit counts UTF-16 code units, not characters. `String.prototype.length` counts each emoji or other character outside the Basic Multilingual Plane (astral-plane character) as 2, so a query of 51–100 such characters is rejected as 'over 100 characters' even though the ticket allows up to 100 characters.\",\n    \"evidence\": \"`if (trimmed.length > MAX_SEARCH_QUERY_LENGTH)` — e.g. '😀'.repeat(60).length === 120, so 60 characters gets a 400 'Search query must be 100 characters or fewer'. Using `[...trimmed].length` would count code points instead.\"\n  }\n]\n```\n\nI didn't run the tests. The test expectations do match the seed data (Andy Weir, the \"martin\" set, \"Hunt\", Ender's Game).\n\nThese all check out and aren't defects:\n- **SQL:** all queries use parameters. The `LIKE ... ESCAPE '\\'` escaping of `\\`, `%` and `_` is correct.\n- **XSS:** the search view escapes everything with `<%= %>`. The 400 fragment only interpolates a constant message, not user input.\n- **Routing:** `/books/search` is registered before `/books/:id` in both routers.\n- **The `?q=` alias on `GET /api/books`:** `SPEC.md` asks for it, and without `q` the endpoint behaves exactly as before.\n- **Constraints:** the diff doesn't touch the schema, dependencies, `seed.sql`, `.env` or `bookshelf.db`."
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 13,
+            "costUsd": 0.4445716,
+            "judgeCostUsd": 0.017274000000000005,
+            "durationSeconds": 74,
+            "startedAt": "2026-11-23T17:47:05.349Z",
+            "error": null,
+            "tracePath": "C:\\Users\\hecto\\AppData\\Local\\Temp\\claude-eval-ZVjzjX\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-false-defects",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "```json\n[\n  {\n    \"file\": \"src/routes/books.ts\",\n    \"line\": 19,\n    \"severity\": \"medium\",\n    \"issue\": \"In the real UI, users never see the validation error. The 400 error fragment is never swapped into #search-results, so after a query over 100 characters (or a non-string q) the old results stay on screen and no error appears. AC3's validation error can't be seen through the HTML search box.\",\n    \"evidence\": \"return res.status(400).send(`<p class=\\\"error\\\">${err.message}</p>`). The page loads htmx 1.9.12 (src/public/htmx.min.js, version:\\\"1.9.12\\\"), and htmx 1.x does not swap 4xx/5xx responses by default. Nothing in src/views adds an htmx:beforeSwap handler or other config to allow it, and index.ejs only sets hx-get/hx-target/hx-trigger on #search-input. The HTML tests use supertest directly, so they pass while the browser behaviour is broken. Fix: either return 200 for the error fragment, or add an htmx:beforeSwap handler that sets evt.detail.shouldSwap = true for 400 responses.\"\n  },\n  {\n    \"file\": \"src/routes/api.ts\",\n    \"line\": 22,\n    \"severity\": \"low\",\n    \"issue\": \"The PR changes the behaviour of the existing GET /api/books endpoint, which the ticket and CLAUDE.md forbid. Any request that includes q is now sent to search: ?q=foo returns filtered results instead of all books, and ?q=a&q=b or a q longer than 100 characters now return 400 where they used to return 200. The only thing that allows this is SPEC.md, which this same PR adds. The ticket asks for nothing like it.\",\n    \"evidence\": \"if (req.query.q !== undefined) { return searchHandler(req, res); }. TICKET.md says \\\"Keep the interface exactly as specified\\\", and CLAUDE.md says \\\"Don't change existing endpoint shapes.\\\" The new /api/books/search endpoint already covers search without changing /api/books.\"\n  },\n  {\n    \"file\": \"src/models/book.ts\",\n    \"line\": 37,\n    \"severity\": \"low\",\n    \"issue\": \"The length limit counts UTF-16 code units, not characters. Text outside the Basic Multilingual Plane, such as emoji and some CJK characters, counts double, so a query of 51 to 100 such characters is wrongly rejected as \\\"over 100 characters\\\".\",\n    \"evidence\": \"if (trimmed.length > MAX_SEARCH_QUERY_LENGTH). For example, '😀'.repeat(60).length === 120, so a 60-character query throws SearchQueryError('Search query must be 100 characters or fewer'). Use [...trimmed].length to count code points.\"\n  }\n]\n```\n\nI didn't run the tests. These findings come from reading the diff alongside the repo source.\n\nThe core work is sound and I found no defects in it:\n- **SQL:** queries are parameterised, and `%`, `_` and `\\` are escaped with `ESCAPE '\\'`.\n- **Routes:** the search route is registered before `/books/:id`.\n- **Escaping:** the results fragment escapes values with `<%= %>`.\n- **Tests:** the expected titles match the seed data, including \"martin\" (four books) and \"Hunt\" (one book).\n\n`bookshelf.db-shm` and `bookshelf.db-wal` are sitting untracked in the working tree. They aren't part of the diff, so they're not in the list, but `*.db` in `.gitignore` doesn't match them. Check whether something touched the database files."
+              },
+              {
+                "name": "verdict-mergeable",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "```json\n[\n  {\n    \"file\": \"src/routes/books.ts\",\n    \"line\": 19,\n    \"severity\": \"medium\",\n    \"issue\": \"In the real UI, users never see the validation error. The 400 error fragment is never swapped into #search-results, so after a query over 100 characters (or a non-string q) the old results stay on screen and no error appears. AC3's validation error can't be seen through the HTML search box.\",\n    \"evidence\": \"return res.status(400).send(`<p class=\\\"error\\\">${err.message}</p>`). The page loads htmx 1.9.12 (src/public/htmx.min.js, version:\\\"1.9.12\\\"), and htmx 1.x does not swap 4xx/5xx responses by default. Nothing in src/views adds an htmx:beforeSwap handler or other config to allow it, and index.ejs only sets hx-get/hx-target/hx-trigger on #search-input. The HTML tests use supertest directly, so they pass while the browser behaviour is broken. Fix: either return 200 for the error fragment, or add an htmx:beforeSwap handler that sets evt.detail.shouldSwap = true for 400 responses.\"\n  },\n  {\n    \"file\": \"src/routes/api.ts\",\n    \"line\": 22,\n    \"severity\": \"low\",\n    \"issue\": \"The PR changes the behaviour of the existing GET /api/books endpoint, which the ticket and CLAUDE.md forbid. Any request that includes q is now sent to search: ?q=foo returns filtered results instead of all books, and ?q=a&q=b or a q longer than 100 characters now return 400 where they used to return 200. The only thing that allows this is SPEC.md, which this same PR adds. The ticket asks for nothing like it.\",\n    \"evidence\": \"if (req.query.q !== undefined) { return searchHandler(req, res); }. TICKET.md says \\\"Keep the interface exactly as specified\\\", and CLAUDE.md says \\\"Don't change existing endpoint shapes.\\\" The new /api/books/search endpoint already covers search without changing /api/books.\"\n  },\n  {\n    \"file\": \"src/models/book.ts\",\n    \"line\": 37,\n    \"severity\": \"low\",\n    \"issue\": \"The length limit counts UTF-16 code units, not characters. Text outside the Basic Multilingual Plane, such as emoji and some CJK characters, counts double, so a query of 51 to 100 such characters is wrongly rejected as \\\"over 100 characters\\\".\",\n    \"evidence\": \"if (trimmed.length > MAX_SEARCH_QUERY_LENGTH). For example, '😀'.repeat(60).length === 120, so a 60-character query throws SearchQueryError('Search query must be 100 characters or fewer'). Use [...trimmed].length to count code points.\"\n  }\n]\n```\n\nI didn't run the tests. These findings come from reading the diff alongside the repo source.\n\nThe core work is sound and I found no defects in it:\n- **SQL:** queries are parameterised, and `%`, `_` and `\\` are escaped with `ESCAPE '\\'`.\n- **Routes:** the search route is registered before `/books/:id`.\n- **Escaping:** the results fragment escapes values with `<%= %>`.\n- **Tests:** the expected titles match the seed data, including \"martin\" (four books) and \"Hunt\" (one book).\n\n`bookshelf.db-shm` and `bookshelf.db-wal` are sitting untracked in the working tree. They aren't part of the diff, so they're not in the list, but `*.db` in `.gitignore` doesn't match them. Check whether something touched the database files."
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 1
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 1,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 1
+  }
+}

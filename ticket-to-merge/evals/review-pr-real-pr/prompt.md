@@ -1,7 +1,7 @@
 ---
-name: review-pr-clean
-description: Review the real BOOK-101 pull request, which has no defects; anything reported as a defect is a false positive.
-tags: [review, precision]
+name: review-pr-real-pr
+description: Review the real BOOK-101 pull request (commit 9cca2b7); ground truth is in the graders.
+tags: [review]
 runs: 3
 max_turns: 40
 timeout_seconds: 900
