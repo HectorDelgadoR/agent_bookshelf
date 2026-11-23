@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| Repo / branch | `https://github.com/<your-github-user>/agent_bookshelf/tree/book-101-search` ← **fill in after pushing the fork** |
+| Repo / branch | [HectorDelgadoR/agent_bookshelf @ book-101-search](https://github.com/HectorDelgadoR/agent_bookshelf/tree/book-101-search) (eval branch: [`eval/planted-bugs`](https://github.com/HectorDelgadoR/agent_bookshelf/tree/eval/planted-bugs)) |
 | Spec | [SPEC.md](SPEC.md) (the ticket as a brief: interface, edge cases, out of scope, verification) |
 | Conventions | [CLAUDE.md](CLAUDE.md) (commands, never-rules, conventions, 34 lines) |
 | Plugin | [ticket-to-merge/](ticket-to-merge/) — entry points `/ticket-to-merge:ship-ticket`, `/ticket-to-merge:review-pr` |
