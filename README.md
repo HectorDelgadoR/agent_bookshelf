@@ -68,8 +68,8 @@ On Windows the 14 pre-existing tests need `C:\tmp` to exist (they hard-code `/tm
   destructive verbs near a protected stem (`ls | grep seed | xargs rm`), `git clean -x`, and starting the server
   (it writes `./bookshelf.db`). Write/Edit content that would write a protected file when run is blocked too,
   as is any edit to the guardrail itself (`ticket-to-merge/hooks/`, `.claude/settings*.json`).
-  **84-case bypass suite**: `node --test ticket-to-merge/hooks/protect.test.mjs` (43 Bash/PowerShell attacks, 12 must-allow
-  commands, 20 file-tool cases, 8 test-lock cases, 1 garbage-input case).
+  **94-case bypass suite**: `node --test ticket-to-merge/hooks/protect.test.mjs` (48 Bash/PowerShell attacks, 17 must-allow
+  commands incl. read-only git pathspecs, 20 file-tool cases, 8 test-lock cases, 1 garbage-input case).
 - **Second layer**: `.claude/settings.json` `permissions.deny` for the same paths (deny rules also cover `@` references,
   which skip PreToolUse hooks).
 - **Tests read-only while implementing**: `hooks/phase.mjs` sets `.ticket-to-merge/phase`; in `green|review|fix` the
@@ -149,6 +149,11 @@ build run unattended.
 `claude plugin validate ./ticket-to-merge` (Claude Code 2.1.330): **✔ Validation passed** — 3 hooks, 2 skills
 (`ticket-to-merge:review-pr`, `ticket-to-merge:ship-ticket`) and 5 agents found; the only warning is a missing
 marketplace icon (plugin-directory listing check, does not affect the result).
+
+**Live run** of `/ticket-to-merge:review-pr main` on `eval/planted-bugs` with the installed plugin: the first run
+blocked itself (the guardrail read the skill's git pathspec `:(exclude)ticket-to-merge/**` as a dangerous glob); after
+the fix it returned **6/6 planted bugs, 0 false positives**, for a measured $0.82 (Opus orchestrator $0.62 at 84% cache
+hit, Sonnet agents $0.20 at 49%). Details in [RESULTS.md](ticket-to-merge/evals/planted-bugs/RESULTS.md).
 
 The Claude Code CLI wasn't installed while the pipeline was built, so the plugin wasn't loaded with `--plugin-dir`
 during the build. The pipeline was run from a Claude Code session that

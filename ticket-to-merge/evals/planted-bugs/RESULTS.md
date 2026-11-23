@@ -44,3 +44,14 @@ with their exact definition files (`agents/*.md`) and models; see the README not
   reviewer catches **B6**, the weakened test (a test can't report its own vacuity).
 - **Small eval.** 6 bugs + 3 decoys on one ticket. 100% here doesn't predict 100% on an unseen branch; the next
   step is more decoys that look like real bugs (the hard case for precision).
+
+## Live run with the installed plugin (Claude Code 2.1.330)
+`claude -p "/ticket-to-merge:review-pr main" --plugin-dir ./ticket-to-merge` on `eval/planted-bugs`:
+- **First run: returned `[]` (review blocked itself).** The skill's read-only pathspec `':(exclude)ticket-to-merge/**'`
+  tripped the guardrail's glob rule. Fixed in `protect.mjs` (protected-file globs only block commands that write;
+  `.env` globs still block reads) and in the skill (plain pathspecs, one git command per call). Regression case added
+  to the bypass suite (now 94 cases).
+- **Re-run after the fix: 6/6 planted bugs at the correct lines, 0 false positives** (10 candidates, 4 duplicates
+  merged by the verifier). Measured cost $0.82: orchestrating session on Opus 5.5 $0.62 (84% cache hit), reviewer
+  and verifier agents on Sonnet $0.20 (49% cache hit). The orchestrator dominates, so the skill's own model is the
+  next lever to test.
