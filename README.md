@@ -9,7 +9,7 @@
 | Spec | [SPEC.md](SPEC.md) (the ticket as a brief: interface, edge cases, out of scope, verification) |
 | Conventions | [CLAUDE.md](CLAUDE.md) (commands, never-rules, conventions, 34 lines) |
 | Plugin | [ticket-to-merge/](ticket-to-merge/) — entry points `/ticket-to-merge:ship-ticket`, `/ticket-to-merge:review-pr` |
-| Eval | [ticket-to-merge/evals/planted-bugs/](ticket-to-merge/evals/planted-bugs/) — answer key, plant patch, results |
+| Eval | [ticket-to-merge/evals/planted-bugs/](ticket-to-merge/evals/planted-bugs/) — answer key, plant patch, results; `claude plugin eval` cases [review-pr-planted-bugs](ticket-to-merge/evals/review-pr-planted-bugs/) and [review-pr-real-pr](ticket-to-merge/evals/review-pr-real-pr/) with [results](ticket-to-merge/evals/results/) |
 
 ## How to run
 ```bash
@@ -48,7 +48,8 @@ $ node --test ticket-to-merge/hooks/protect.test.mjs ticket-to-merge/hooks/tripw
 ```
 90 of the 104 tests are new (`tests/search/`, one `describe` per acceptance criterion, names prefixed `AC1`…`AC4`;
 AC5 is the suite itself). Red run before implementation: 62 failing for the right reasons, 28 regression guards passing.
-On Windows the 14 pre-existing tests need `C:\tmp` to exist (they hard-code `/tmp`); the new tests use `os.tmpdir()`.
+All tests use a per-process database under `os.tmpdir()`, so the suite runs unchanged on macOS, Linux and Windows (the
+14 pre-existing tests used to hard-code `/tmp`, which doesn't exist on Windows; fixed in `fix(tests): use os.tmpdir()`).
 
 ## Pipeline and commits
 | Stage | Who | Evidence |
@@ -109,7 +110,8 @@ can't fail) + 3 clean decoys that look suspicious. The eval branch has no SPEC.m
 | Plugin version | Run 1 | Run 2 | Run 3 | Recall | Precision | Cost / run |
 |---|---|---|---|---|---|---|
 | v1 (4844087) | 5/6, 1 FP | 5/6, 0 FP | 5/6, 1 FP | 15/18 (83%) | 15/17 (88%) | $0.79 avg |
-| **v2, final (5b1a342)** | **6/6, 0 FP** | **6/6, 0 FP** | **5/6, 0 FP** | **17/18 (94%)** | **17/17 (100%)** | **$0.84 avg** |
+| **v2 (5b1a342)** | **6/6, 0 FP** | **6/6, 0 FP** | **5/6, 0 FP** | **17/18 (94%)** | **17/17 (100%)** | **$0.84 avg** |
+| v3, final (eval-driven reviewer + verifier fixes) | measured with `claude plugin eval`, see Stretch B: all 6 planted bugs and 0 decoys in 3/3 runs | | | 18/18 | 0 FP | ~$0.64 |
 
 v1 never found the weakened test (on a long diff the reviewers only got the source changes) and twice flagged a
 decoy (a fixed error message in `res.send`, because my own ticket note was worded too broadly). Both were fixed in the
@@ -200,8 +202,39 @@ and did the orchestrator's checks (phase switches, red/green verification, diff 
 were exercised directly: the 128 hook tests (110 PreToolUse, 18 tripwire) and a gate test against passing/failing
 suites.
 
-## Not done
-- Stretch (+5): neither a learning reviewer nor `claude plugin eval` Δ.
+## Stretch B · What the plugin adds, measured with `claude plugin eval`
+Two eval cases in `ticket-to-merge/evals/`, each run 3 times **with** the plugin and 3 times **without** it
+(`--ablation with-without`, LLM graders judged by Sonnet, 3 votes each). A scaffold builds each run's workspace from
+this repo: the branch's files, its diff against `main` as `CHANGES.diff`, and the ticket as `TICKET.md` (no git
+history, no plugin folder, so neither arm can see the answer key). Both arms get the same natural prompt.
+
+```bash
+claude plugin eval ./ticket-to-merge --scaffold --ablation with-without --runs 3 --judge-model sonnet --trust-plugin --no-publish
+```
+
+| Case | Ground truth | With | Without | **Δ** |
+|---|---|---|---|---|
+| `review-pr-planted-bugs` | 6 planted bugs, 1 real unplanted bug (B7), 3 decoys; 8 graders | 0.88 | 0.88 | **0.00** |
+| `review-pr-real-pr` | the real PR (`9cca2b7`): 1 real defect (HTMX never shows the 400 error); 2 graders | 1.00 | 1.00 | **0.00** |
+
+**Result: Δ = 0.00.** On review quality, the plugin matches plain Claude (Opus) at about 40% more cost per review
+(~$0.64 vs ~$0.45 in the final runs). Given the diff and the ticket, the base model already finds every planted bug and avoids the decoys.
+The plugin's measurable value in this capstone is in the build pipeline and guardrails (test lock, done gate, tripwire),
+not in review recall on a small diff.
+
+How the eval changed the plugin (all runs are kept in `evals/results/`):
+1. First "clean code" case assumed the real PR had no defects. Every no-plugin run found one it does have (HTMX doesn't
+   swap 4xx responses, so the search box never shows the validation error); the plugin missed it 3/3. That grading was
+   wrong and the case was re-graded around the real defect.
+2. `review-correctness` now follows each changed endpoint to its consumer (templates, `hx-*` attributes, scripts):
+   the reviewers raised the defect 3/3, but the verifier dropped it in 2/3 ("SPEC.md requires the 400").
+3. `review-verifier` no longer treats literal spec conformance as a refutation when the feature fails its purpose for
+   the user: the plugin then found it 3/3 (real-PR case 1.00).
+4. A plugin run also reported that defect on the planted-bug branch, which was cut before the HTMX fix; the grader had
+   misread it as a decoy. It is now unplanted real bug **B7** in the answer key, with its own grader.
+
+Total eval spend: $20.36 over 5 suite runs (42 reviews plus judging). The final numbers above come from the final plugin
+version; earlier runs are in `evals/results/` with the grading they used.
 
 ---
 

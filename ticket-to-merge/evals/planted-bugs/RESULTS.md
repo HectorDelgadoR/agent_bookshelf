@@ -89,3 +89,17 @@ defect (worded generally, without naming the planted pattern).
 Run 3's miss: neither specialist raised B4 (empty query on the HTML route). The orchestrator noticed it while assembling
 the result but, as the skill requires, did not add findings of its own after verification, so B4 appears only in its
 prose note. A possible next step is letting the orchestrator submit its own observations to the verifier as candidates.
+
+## v3 and the plugin-eval Δ (stretch B)
+After v2, `claude plugin eval` cases ran each review 3× with and 3× without the plugin (see the README's "Stretch B").
+They exposed a real defect in the real PR that the plugin missed (the HTMX search box never shows the 400 validation
+error), which led to v3: `review-correctness` follows endpoints to their consumer, and `review-verifier` no longer
+treats literal spec conformance as a refutation. The same defect also exists on `eval/planted-bugs` (cut before the
+HTMX fix) and is recorded as unplanted real bug B7 in `answer-key.json`.
+
+| Case (final plugin) | With | Without | Δ |
+|---|---|---|---|
+| review-pr-planted-bugs (B1–B6 found 3/3 in both arms, 0 decoys; B7 found by neither in this set) | 0.88 | 0.88 | 0.00 |
+| review-pr-real-pr (HTMX defect found 3/3 in both arms) | 1.00 | 1.00 | 0.00 |
+
+Every suite run, including the ones with grading that was later corrected, is kept in `../results/`.
