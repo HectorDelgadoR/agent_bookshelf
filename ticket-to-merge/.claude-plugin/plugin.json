@@ -1,0 +1,7 @@
+{
+  "name": "ticket-to-merge",
+  "version": "1.0.0",
+  "description": "Take one ticket from spec to merge-ready: test-first builder agents, read-only specialist reviewers with a verifier, a guardrail hook and a green-suite gate. Entry points: /ticket-to-merge:ship-ticket and /ticket-to-merge:review-pr.",
+  "author": { "name": "Hector Delgado" },
+  "keywords": ["tdd", "code-review", "guardrails", "agents"]
+}

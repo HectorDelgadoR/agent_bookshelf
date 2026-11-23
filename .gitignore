@@ -149,3 +149,6 @@ vite.config.ts.timestamp-*
 *.db
 *.sqlite
 *.sqlite3
+
+# ticket-to-merge pipeline state (phase, gate counter, guardrail log)
+.ticket-to-merge/

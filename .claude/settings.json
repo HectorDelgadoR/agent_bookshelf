@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Edit(./bookshelf.db)",
+      "Edit(./bookshelf.db-*)",
+      "Edit(./src/db/seed.sql)",
+      "Edit(./src/db/schema.sql)",
+      "Edit(./.claude/settings.json)",
+      "Bash(npm start)",
+      "Bash(npm run dev)",
+      "Bash(npx agent-bookshelf)",
+      "Bash(git clean -fdx)",
+      "Bash(git push --force *)"
+    ]
+  }
+}

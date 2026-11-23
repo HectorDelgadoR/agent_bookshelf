@@ -1,0 +1,43 @@
+{
+  "description": "ticket-to-merge guardrails: protect bookshelf.db / seed.sql / .env and the guardrail itself, lock tests during green/review/fix, and gate 'done' on a passing suite.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell|Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/protect.mjs"],
+            "onFailure": "block",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/gate.mjs"],
+            "timeout": 240
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/gate.mjs"],
+            "timeout": 240
+          }
+        ]
+      }
+    ]
+  }
+}
