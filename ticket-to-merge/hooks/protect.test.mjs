@@ -165,6 +165,9 @@ writeFileSync(path.join(SCRIPTS, 'tmpdb.js'), "require('fs').unlinkSync('/tmp/te
 test('blocks running a script that deletes a run-time path: node c2.js', () => assert.equal(bash('node c2.js', { cwd: SCRIPTS }).status, 2));
 test('blocks running it through npx tsx / quotes', () => assert.equal(bash('npx tsx "./c3.mjs"', { cwd: SCRIPTS }).status, 2));
 test('blocks running it with python3', () => assert.equal(bash('python3 p.py', { cwd: SCRIPTS }).status, 2));
+test('blocks running it without its extension: node c2 (node resolves c2.js)', () => assert.equal(bash('node c2', { cwd: SCRIPTS }).status, 2));
+test('blocks Write of a script that deletes files it finds by listing a directory', () =>
+  assert.equal(run('Write', { file_path: 'scripts/r.js', content: "const fs=require('fs'); for (const f of fs.readdirSync('src/db')) if (f[0]==='s') fs.rmSync('src/db/'+f)" }).status, 2));
 test('allows running a script that only reads', () => { const r = bash('node benign.js', { cwd: SCRIPTS }); assert.equal(r.status, 0, r.stderr); });
 test('allows a script that deletes a temp test DB (test-bookshelf.db is not bookshelf.db)', () => {
   const r = bash('node tmpdb.js', { cwd: SCRIPTS }); assert.equal(r.status, 0, r.stderr);

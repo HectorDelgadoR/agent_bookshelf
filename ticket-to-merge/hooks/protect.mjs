@@ -198,6 +198,8 @@ const DYNAMIC_PATH_RE = new RegExp([
   String.raw`\\x[0-9a-f]{2}|\\u\{?[0-9a-f]{4}`,
   String.raw`\.split\(\s*(''|"")\s*\)\s*\.reverse\(`,
 ].join('|'));
+// Finding a file by listing a directory instead of naming it.
+const DIR_LISTING_RE = /readdirsync|\breaddir\s*\(|\bopendir|globsync|\bglob\s*\(|os\.listdir|os\.walk|os\.scandir|\.iterdir\s*\(|\.glob\s*\(|get-childitem/;
 // Protected names as whole names: `test-bookshelf.db` (a temp test DB) is not `bookshelf.db`.
 const PROTECTED_NAME_RE = /(^|[^a-z0-9_-])(seed\.sql|bookshelf\.db)(?![a-z0-9_])/;
 
@@ -211,6 +213,9 @@ export function analyzeContent(rawContent) {
   if (DYNAMIC_PATH_RE.test(content)) {
     return 'writes or deletes files using a path built at run time (char codes, base64/hex, escapes or reversed strings); name paths literally';
   }
+  if (DIR_LISTING_RE.test(content)) {
+    return 'writes or deletes files it finds by listing a directory; name the files explicitly';
+  }
   return null;
 }
 
@@ -222,11 +227,16 @@ const SCRIPT_TOKEN_RE = /^[^\s-][^\s]*\.(c?m?js|jsx|c?m?ts|tsx|py|sh|bash|ps1|rb
 export function analyzeExecutedScripts(cmd, cwd) {
   const tokens = String(cmd).replace(/['"`]/g, ' ').split(/[\s;&|()<>=]+/).filter(Boolean);
   for (const tok of tokens) {
-    if (!SCRIPT_TOKEN_RE.test(tok)) continue;
-    const abs = path.resolve(cwd, tok.replace(/^&/, ''));
-    if (/[\\/]ticket-to-merge[\\/]hooks[\\/]/.test(abs)) continue;
-    let st; try { st = statSync(abs); } catch { continue; } // not a local file
-    if (!st.isFile()) continue;
+    // `node scripts/c2` runs scripts/c2.js: also try the usual extensions for extension-less path-like tokens.
+    const bare = /^[^\s-][\w./\\-]*$/.test(tok) && !/\.[a-z0-9]{1,4}$/i.test(tok);
+    if (!SCRIPT_TOKEN_RE.test(tok) && !bare) continue;
+    const base = path.resolve(cwd, tok.replace(/^&/, ''));
+    if (/[\\/]ticket-to-merge[\\/]hooks[\\/]/.test(base)) continue;
+    let abs = null; let st = null;
+    for (const cand of bare ? [base, ...['.js', '.mjs', '.cjs', '.ts', '.py'].map((e) => base + e)] : [base]) {
+      try { const s = statSync(cand); if (s.isFile()) { abs = cand; st = s; break; } } catch { /* try next */ }
+    }
+    if (!st) continue; // not a local file
     if (st.size > 1_000_000) return `Script ${tok} is too large to inspect (>1 MB); blocked.`;
     let text; try { text = readFileSync(abs, 'utf8'); } catch { return `Script ${tok} exists but can't be read for inspection; blocked.`; }
     const why = analyzeContent(text);
