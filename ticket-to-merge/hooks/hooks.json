@@ -1,6 +1,18 @@
 {
-  "description": "ticket-to-merge guardrails: protect bookshelf.db / seed.sql / .env and the guardrail itself, lock tests during green/review/fix, and gate 'done' on a passing suite.",
+  "description": "ticket-to-merge guardrails: block writes to bookshelf.db / seed.sql / .env and the guardrail itself (PreToolUse), restore them if anything slips through (PostToolUse/Stop tripwire), lock tests during green/review/fix, and gate 'done' on a passing suite.",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/tripwire.mjs", "--baseline"],
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell|Read|Grep|Glob",
@@ -15,9 +27,28 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/tripwire.mjs"],
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/tripwire.mjs"],
+            "timeout": 15
+          },
           {
             "type": "command",
             "command": "node",
