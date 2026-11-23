@@ -55,3 +55,37 @@ with their exact definition files (`agents/*.md`) and models; see the README not
   merged by the verifier). Measured cost $0.82: orchestrating session on Opus 5.5 $0.62 (84% cache hit), reviewer
   and verifier agents on Sonnet $0.20 (49% cache hit). The orchestrator dominates, so the skill's own model is the
   next lever to test.
+
+## Three real `/ticket-to-merge:review-pr` runs (the brief's "run /review-pr 3×")
+Each run: `claude -p "/ticket-to-merge:review-pr main" --plugin-dir ./ticket-to-merge --output-format json` on
+`eval/planted-bugs`, scored against `answer-key.json` (same file, line within a few lines). Cost and cache hit come
+from each run's own usage report (`total_cost_usd`, `modelUsage`; cache hit = cache-read ÷ all input tokens).
+
+### v1: the plugin as first submitted (commit 4844087)
+| Run | Findings | Planted found | Decoys flagged | Recall | Precision | Cost | Cache hit (Opus orchestrator · Sonnet agents) |
+|---|---|---|---|---|---|---|---|
+| 1 | 6 | B1–B5 (missed B6) | 1 (`books.ts:19`) | 5/6 | 5/6 | $0.81 | 86% · 41% |
+| 2 | 5 | B1–B5 (missed B6) | 0 | 5/6 | 5/5 | $0.77 | 83% · 60% |
+| 3 | 6 | B1–B5 (missed B6) | 1 (`books.ts:19`) | 5/6 | 5/6 | $0.80 | 89% · 52% |
+
+Two causes, both in the plugin's own text, not in the agents' ability:
+- **B6 (weakened test) never found.** The diff was too long to paste, so the orchestrator pasted only source changes
+  and left the test changes in a file no reviewer was told to read.
+- **Decoy flagged.** The bundled ticket note said "no raw interpolation into `res.send` strings"; reviewers applied it
+  to a fixed error message that no request data can reach, and the verifier kept it in 2 of 3 runs.
+
+### v2: after the fix (commit 5b1a342)
+Reviewers must read every changed file that isn't pasted (tests in full); the verifier drops "rule violations" no
+request data can reach; the ticket note is scoped to user-controlled values and says a test that can't fail is a
+defect (worded generally, without naming the planted pattern).
+
+| Run | Findings | Planted found | Decoys flagged | Recall | Precision | Cost | Cache hit (Opus orchestrator · Sonnet agents) |
+|---|---|---|---|---|---|---|---|
+| 1 | 6 | B1–B6 | 0 | 6/6 | 6/6 | $0.84 | 84% · 27% |
+| 2 | 6 | B1–B6 | 0 | 6/6 | 6/6 | $0.83 | 89% · 58% |
+| 3 | 5 | B1–B3, B5, B6 (missed B4) | 0 | 5/6 | 5/5 | $0.85 | 87% · 49% |
+| **Total** | 17 | **17/18 (94%)** | **0** | | **17/17 (100%)** | **$0.84 avg** | |
+
+Run 3's miss: neither specialist raised B4 (empty query on the HTML route). The orchestrator noticed it while assembling
+the result but, as the skill requires, did not add findings of its own after verification, so B4 appears only in its
+prose note. A possible next step is letting the orchestrator submit its own observations to the verifier as candidates.

@@ -89,14 +89,27 @@ On Windows the 14 pre-existing tests need `C:\tmp` to exist (they hard-code `/tm
 6 planted bugs (SQL injection, `>=` off-by-one, route order, empty query → nothing, XSS via `<%- %>`, a test that
 can't fail) + 3 clean decoys that look suspicious. The eval branch has no SPEC.md, like a grader branch.
 
+**Real plugin runs** — `claude -p "/ticket-to-merge:review-pr main" --plugin-dir ./ticket-to-merge` on `eval/planted-bugs`:
+
+| Plugin version | Run 1 | Run 2 | Run 3 | Recall | Precision | Cost / run |
+|---|---|---|---|---|---|---|
+| v1 (4844087) | 5/6, 1 FP | 5/6, 0 FP | 5/6, 1 FP | 15/18 (83%) | 15/17 (88%) | $0.79 avg |
+| **v2, final (5b1a342)** | **6/6, 0 FP** | **6/6, 0 FP** | **5/6, 0 FP** | **17/18 (94%)** | **17/17 (100%)** | **$0.84 avg** |
+
+v1 never found the weakened test (on a long diff the reviewers only got the source changes) and twice flagged a
+decoy (a fixed error message in `res.send`, because my own ticket note was worded too broadly). Both were fixed in the
+plugin's text, then re-measured: v2. In v2 run 3 neither specialist raised the empty-query bug.
+
+**Development eval** — the same agent definitions and models dispatched as subagents, before the plugin was run for real:
+
 | Configuration | Run 1 | Run 2 | Run 3 | Recall | Precision |
 |---|---|---|---|---|---|
-| Baseline: specialists + verifier on Sonnet | 6/6, 0 FP | 6/6, 0 FP | 6/6, 0 FP | **100%** | **100%** |
-| Lever: specialists on Haiku, verifier on Sonnet | 6/6, 0 FP | 6/6, 0 FP | 6/6, 0 FP | **100%** | **100%** |
+| Baseline: specialists + verifier on Sonnet | 6/6, 0 FP | 6/6, 0 FP | 6/6, 0 FP | 100% | 100% |
+| Lever: specialists on Haiku, verifier on Sonnet | 6/6, 0 FP | 6/6, 0 FP | 6/6, 0 FP | 100% | 100% |
 
-Details, per-reviewer breakdown and caveats: [RESULTS.md](ticket-to-merge/evals/planted-bugs/RESULTS.md).
-The verifier earned its place by merging duplicates (9–11 candidates → 6 findings each run) and correcting four
-wrong line numbers from Haiku; no reviewer flagged a decoy.
+Details, per-reviewer breakdown, per-run cost and cache hit: [RESULTS.md](ticket-to-merge/evals/planted-bugs/RESULTS.md).
+The verifier earned its place by merging duplicates (9–11 candidates → 5–6 findings each run), correcting wrong line
+numbers from Haiku, and in v2 dropping the constant-message interpolation that v1 let through.
 
 ## Cost report
 Build and review rows: **estimated** from the tokens each subagent reported, at list price (Sonnet 5.5 $2/$10,
@@ -110,7 +123,7 @@ cache. The last row is **measured**: the usage report of a real `/ticket-to-merg
 | Review (real diff) | ~$0.38 est. (157k tok) | n/a¹ | Sonnet: security 77k, correctness 80k; verifier skipped (0 candidates) |
 | Fix loop | $0.00 | — | none needed (0 findings) |
 | **Total, one ticket** | **~$0.82 est.** | | + orchestrator session (see the measured row)² |
-| Review, measured (live `/review-pr` on the planted-bug branch) | **$0.82** | **84%** orchestrator · **49%** agents | Opus 5.5 orchestrator $0.62 · Sonnet reviewers + verifier $0.20 |
+| Review, measured (3 real `/review-pr` runs, v2, planted-bug branch) | **$0.84 / run** | **84–89%** orchestrator · **27–58%** agents | Opus 5.5 orchestrator ~$0.62 · Sonnet reviewers + verifier ~$0.22 |
 
 **One lever: cheaper reviewer model.** Specialists Sonnet → Haiku, verifier kept on Sonnet (it guards precision).
 
@@ -159,8 +172,9 @@ marketplace icon (plugin-directory listing check, does not affect the result).
 
 **Live run** of `/ticket-to-merge:review-pr main` on `eval/planted-bugs` with `--plugin-dir ./ticket-to-merge`: the first run
 blocked itself (the guardrail read the skill's git pathspec `:(exclude)ticket-to-merge/**` as a dangerous glob); after
-the fix it returned **6/6 planted bugs, 0 false positives**, for a measured $0.82 (Opus orchestrator $0.62 at 84% cache
-hit, Sonnet agents $0.20 at 49%). Details in [RESULTS.md](ticket-to-merge/evals/planted-bugs/RESULTS.md).
+that fix a single run returned 6/6, 0 false positives. Three formal runs followed (v1: 15/18, 2 false positives; v2
+after fixing the review instructions: 17/18, 0 false positives); see "Review quality" above and
+[RESULTS.md](ticket-to-merge/evals/planted-bugs/RESULTS.md).
 
 The build stages (red, green, review) and the 3+3 planted-bug runs were driven from a Claude Code session that
 dispatched each stage as a subagent **with the exact agent definition file and model** from `ticket-to-merge/agents/`
