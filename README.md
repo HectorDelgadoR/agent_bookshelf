@@ -41,8 +41,9 @@ $ npm run test:run
  Test Files  6 passed (6)
       Tests  104 passed (104)
 $ npx tsc --noEmit        # clean
-$ node --test ticket-to-merge/hooks/protect.test.mjs
-# pass 108
+$ node --test ticket-to-merge/hooks/protect.test.mjs ticket-to-merge/hooks/tripwire.test.mjs
+# tests 128
+# pass 128
 # fail 0
 ```
 90 of the 104 tests are new (`tests/search/`, one `describe` per acceptance criterion, names prefixed `AC1`…`AC4`;
@@ -60,22 +61,36 @@ On Windows the 14 pre-existing tests need `C:\tmp` to exist (they hard-code `/tm
 | 4 · Prove | planted-bug eval, 3 runs × 2 configs | [RESULTS.md](ticket-to-merge/evals/planted-bugs/RESULTS.md) |
 
 ## Guardrails
-- **Protected files** (`hooks/protect.mjs`, PreToolUse on `Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell|Read|Grep|Glob`,
-  exit 2 to block, `onFailure: block`, fails closed on bad input). Blocks any write to `bookshelf.db*`, `seed.sql`,
-  `.env*`, and any read of `.env`. For Bash it checks de-obfuscated variants of the command: quotes/escapes/`$'…'`
-  removed, brace expansion, squashed concatenation (`'s'+'eed.sql'`), globs that could expand to a protected file
-  (`se*`, `*.sql`, `bookshelf.d?`), variable/`$(…)` splicing near `.sql/.db/.env`, base64/hex/`rev` decoding,
-  destructive verbs near a protected stem (`ls | grep seed | xargs rm`), `git clean -x`, and starting the server
-  (it writes `./bookshelf.db`). Write/Edit content that would write a protected file when run is blocked too, including
-  code that builds the path at run time (char codes, base64/hex, escapes, reversed strings) next to a file write. When a
-  command runs a local script (`node x.js`, `python x.py`, `npx tsx x.ts`, `./x.sh`…), the script is read and checked
-  the same way before it runs, which closes the two-step "write a script, then run it" bypass. Any edit to the guardrail
-  itself (`ticket-to-merge/hooks/`, `.claude/settings*.json`) is blocked.
-  **108-case bypass suite**: `node --test ticket-to-merge/hooks/protect.test.mjs` (48 Bash/PowerShell attacks,
-  8 write-then-execute attacks, 23 must-allow commands incl. read-only git pathspecs and real test runs, 20 file-tool
-  cases, 8 test-lock cases, 1 garbage-input case).
-- **Second layer**: `.claude/settings.json` `permissions.deny` for the same paths (deny rules also cover `@` references,
-  which skip PreToolUse hooks).
+`bookshelf.db*`, `seed.sql` and `.env*` are protected by three layers. The first one reads commands and code, and any
+text check can be beaten by building a path some new way. That's why the second layer checks the **result** after
+every command and restores the files: it is what guarantees `seed.sql` survives.
+
+1. **Block up front** (`hooks/protect.mjs`, PreToolUse on `Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell|Read|Grep|Glob`,
+   exit 2, `onFailure: block`, fails closed on bad input). Blocks writes to the protected files and any read of `.env`,
+   with a clear message. For Bash it checks de-obfuscated variants of the command: quotes/escapes/`$'…'` removed,
+   brace expansion, squashed concatenation (`'s'+'eed.sql'`), globs that could expand to a protected file in a command
+   that writes (`rm se*`, `rm *.sql`), variable/`$(…)` splicing near `.sql/.db/.env`, base64/hex/`rev` decoding,
+   destructive verbs near a protected stem (`ls | grep seed | xargs rm`), `git clean -x`, and starting the server
+   (it writes `./bookshelf.db`). Code written with Write/Edit, and any local script a command is about to run
+   (`node x.js`, `node x`, `python x.py`, `npx tsx x.ts`, `./x.sh`…), is checked for file writes that name a protected
+   file, build a path at run time (char codes, base64/hex, escapes, reversed strings) or find files by listing a
+   directory. Edits to the guardrail itself (`ticket-to-merge/hooks/`, `.claude/settings*.json`) are blocked.
+2. **Tripwire after every command** (`hooks/tripwire.mjs`, PostToolUse on `Bash|PowerShell`, plus `Stop` for
+   background commands). Tracked protected files are compared with `main` (so a deletion committed in the same command
+   is caught) and restored with `git checkout`; untracked ones are compared with a baseline taken at `SessionStart`:
+   a backed-up `bookshelf.db` is restored, a newly created one removed, and `.env*` is hash-only (never copied), so a
+   change is reported rather than restored. Any hit exits 2 with a message, so Claude is told what happened.
+3. **Permission rules**: `.claude/settings.json` `permissions.deny` for the same paths (deny rules also cover `@`
+   references, which skip PreToolUse hooks).
+
+**Tests**: `protect.test.mjs` has 110 cases (48 Bash/PowerShell attacks, 10 write-then-execute attacks, 23 must-allow
+commands incl. read-only git pathspecs and real test runs, 20 file-tool cases, 8 test-lock cases, 1 garbage input).
+`tripwire.test.mjs` has 18: each attack chain from two independent reviews (array join, spread + reverse, `.replace()`,
+directory listing, path read from a data file, two modules, Python join, overwrite) is actually run in a temp git repo,
+then the tripwire must block and restore `seed.sql`; plus committed deletions, background commands, `bookshelf.db`
+created/overwritten/deleted, `.env` changes, and do-nothing cases (clean repo, other projects, not a git repo).
+**Limit:** layer 1 is heuristics and will miss new tricks; it exists to stop most attempts early with a clear reason.
+Layer 2 restores the file after the command, so a change is undone, not prevented, and `.env` can only be reported.
 - **Tests read-only while implementing**: `hooks/phase.mjs` sets `.ticket-to-merge/phase`; in `green|review|fix` the
   hook blocks edits to `tests/` and `*.test.*`. Only the main session can change phase: the hook rejects `phase.mjs`
   when the call carries `agent_id` (i.e. comes from a subagent), so an implementer can't unlock its own tests.
@@ -98,7 +113,9 @@ can't fail) + 3 clean decoys that look suspicious. The eval branch has no SPEC.m
 
 v1 never found the weakened test (on a long diff the reviewers only got the source changes) and twice flagged a
 decoy (a fixed error message in `res.send`, because my own ticket note was worded too broadly). Both were fixed in the
-plugin's text, then re-measured: v2. In v2 run 3 neither specialist raised the empty-query bug.
+plugin's text, then re-measured: v2. In v2 run 3 neither specialist raised the empty-query bug. The v2 changes were
+written after seeing v1's misses on these same 6 bugs and then re-scored on them; they are worded generally (no
+planted pattern is named), but 17/18 is an optimistic estimate for planted bugs the reviewer hasn't seen.
 
 **Development eval** — the same agent definitions and models dispatched as subagents, before the plugin was run for real:
 
@@ -179,7 +196,8 @@ after fixing the review instructions: 17/18, 0 false positives); see "Review qua
 The build stages (red, green, review) and the 3+3 planted-bug runs were driven from a Claude Code session that
 dispatched each stage as a subagent **with the exact agent definition file and model** from `ticket-to-merge/agents/`
 and did the orchestrator's checks (phase switches, red/green verification, diff scoping, commits) itself. The hooks
-were exercised directly: the 108-case bypass suite and a gate test against passing/failing suites.
+were exercised directly: the 128 hook tests (110 PreToolUse, 18 tripwire) and a gate test against passing/failing
+suites.
 
 ## Not done
 - Stretch (+5): neither a learning reviewer nor `claude plugin eval` Δ.
