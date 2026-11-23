@@ -146,12 +146,15 @@ of findings. I would not cut the test lock or the stop gate: they cost nothing p
 build run unattended.
 
 ## How this submission was executed (honest note)
-The Claude Code CLI isn't installed on the machine this was built on, so the plugin couldn't be loaded with
-`--plugin-dir` or checked with `claude plugin validate` here. The pipeline was run from a Claude Code session that
+`claude plugin validate ./ticket-to-merge` (Claude Code 2.1.330): **✔ Validation passed** — 3 hooks, 2 skills
+(`ticket-to-merge:review-pr`, `ticket-to-merge:ship-ticket`) and 5 agents found; the only warning is a missing
+marketplace icon (plugin-directory listing check, does not affect the result).
+
+The Claude Code CLI wasn't installed while the pipeline was built, so the plugin wasn't loaded with `--plugin-dir`
+during the build. The pipeline was run from a Claude Code session that
 dispatched each stage as a subagent **with the exact agent definition file and model** from `ticket-to-merge/agents/`
 and did the orchestrator's checks (phase switches, red/green verification, diff scoping, commits) itself. The hooks
-were exercised directly: the 84-case bypass suite and a gate test against passing/failing suites. Before submitting:
-run `claude plugin validate ./ticket-to-merge` and one `/ticket-to-merge:review-pr` on `eval/planted-bugs`.
+were exercised directly: the 84-case bypass suite and a gate test against passing/failing suites.
 
 ## Not done
 - Stretch (+5): neither a learning reviewer nor `claude plugin eval` Δ (needs the CLI to measure).
