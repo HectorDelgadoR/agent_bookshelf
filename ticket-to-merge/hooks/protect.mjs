@@ -8,7 +8,7 @@
 // It also blocks starting the server (it writes ./bookshelf.db) and common obfuscation tricks.
 // Fails closed: if the hook itself errors, the call is blocked.
 
-import { readFileSync, existsSync, realpathSync, appendFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync, appendFileSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 const PROTECTED_LITERALS = ['seed.sql', 'bookshelf.db'];
@@ -178,12 +178,59 @@ export function analyzeFileTool(tool, toolInput, cwd, { lockOn = false } = {}) {
   }
   if (tool === 'Read' || tool === 'Grep' || tool === 'Glob') return null;
   // Content that would later write a protected file when executed (e.g. a helper script).
-  const content = lower([toolInput.content, toolInput.new_string, toolInput.new_source, ...(toolInput.edits || []).map((e) => e.new_string)].filter(Boolean).join('\n'));
-  if (content && WRITE_API_RE.test(content)) {
-    const squashed = content.replace(/['"`\s+]/g, '');
-    if (PROTECTED_LITERALS.some((l) => squashed.includes(l)) || /['"`/]\.env['"`]/.test(content)) {
-      return 'New code would write to a protected file (seed.sql / bookshelf.db / .env); blocked.';
-    }
+  const content = [toolInput.content, toolInput.new_string, toolInput.new_source, ...(toolInput.edits || []).map((e) => e.new_string)].filter(Boolean).join('\n');
+  const why = analyzeContent(content);
+  return why ? `New code ${why}; blocked.` : null;
+}
+
+// ---------- code content analysis (used for Write/Edit content and for scripts about to be executed) ----------
+// A filesystem mutation in JS/TS, Python, shell or PowerShell.
+const MUTATION_RE = new RegExp([
+  WRITE_API_RE.source,
+  String.raw`fs\.promises|promises\.(writefile|appendfile|rm|unlink|rename|copyfile|truncate)`,
+  String.raw`\bshutil\.|\bos\.(remove|unlink|rename|replace|truncate)\b|\.write_(text|bytes)\s*\(|\.unlink\s*\(`,
+  String.raw`\b(remove-item|set-content|add-content|clear-content|out-file|copy-item|move-item)\b`,
+].join('|'));
+// A path assembled at run time, so no protected name appears literally.
+const DYNAMIC_PATH_RE = new RegExp([
+  String.raw`fromcharcode|\bchr\s*\(|\[char\]\s*\d|bytes\.fromhex|b64decode|frombase64string`,
+  String.raw`buffer\.from\([^)]*['"](base64|hex|base64url)['"]|\batob\s*\(`,
+  String.raw`\\x[0-9a-f]{2}|\\u\{?[0-9a-f]{4}`,
+  String.raw`\.split\(\s*(''|"")\s*\)\s*\.reverse\(`,
+].join('|'));
+// Protected names as whole names: `test-bookshelf.db` (a temp test DB) is not `bookshelf.db`.
+const PROTECTED_NAME_RE = /(^|[^a-z0-9_-])(seed\.sql|bookshelf\.db)(?![a-z0-9_])/;
+
+export function analyzeContent(rawContent) {
+  const content = lower(rawContent);
+  if (!content || !MUTATION_RE.test(content)) return null;
+  const squashed = content.replace(/['"`\s+]/g, '');
+  if (PROTECTED_NAME_RE.test(content) || PROTECTED_NAME_RE.test(squashed) || /['"`/\\]\.env['"`]/.test(content)) {
+    return 'would write to a protected file (seed.sql / bookshelf.db / .env)';
+  }
+  if (DYNAMIC_PATH_RE.test(content)) {
+    return 'writes or deletes files using a path built at run time (char codes, base64/hex, escapes or reversed strings); name paths literally';
+  }
+  return null;
+}
+
+// Scripts a shell command is about to run: `node x.js`, `python x.py`, `bash x.sh`, `./x.sh`, `npx tsx x.ts`,
+// `pwsh -File x.ps1`, `& .\x.ps1`... Each local script file named in the command is read and checked like Write
+// content, which closes the two-step "write a script, then run it" bypass. The plugin's own hooks are trusted
+// (agents can't edit them). A file that exists but can't be read fails closed.
+const SCRIPT_TOKEN_RE = /^[^\s-][^\s]*\.(c?m?js|jsx|c?m?ts|tsx|py|sh|bash|ps1|rb|pl|php)$/;
+export function analyzeExecutedScripts(cmd, cwd) {
+  const tokens = String(cmd).replace(/['"`]/g, ' ').split(/[\s;&|()<>=]+/).filter(Boolean);
+  for (const tok of tokens) {
+    if (!SCRIPT_TOKEN_RE.test(tok)) continue;
+    const abs = path.resolve(cwd, tok.replace(/^&/, ''));
+    if (/[\\/]ticket-to-merge[\\/]hooks[\\/]/.test(abs)) continue;
+    let st; try { st = statSync(abs); } catch { continue; } // not a local file
+    if (!st.isFile()) continue;
+    if (st.size > 1_000_000) return `Script ${tok} is too large to inspect (>1 MB); blocked.`;
+    let text; try { text = readFileSync(abs, 'utf8'); } catch { return `Script ${tok} exists but can't be read for inspection; blocked.`; }
+    const why = analyzeContent(text);
+    if (why) return `Script ${tok} ${why}; blocked before it runs.`;
   }
   return null;
 }
@@ -212,7 +259,8 @@ function main() {
   const isSubagent = Boolean(input.agent_id || input.agent_type);
 
   let reason = null;
-  if (tool === 'Bash' || tool === 'PowerShell') reason = analyzeBash(toolInput.command || '', { lockOn, isSubagent, isPowerShell: tool === 'PowerShell' });
+  if (tool === 'Bash' || tool === 'PowerShell') reason = analyzeBash(toolInput.command || '', { lockOn, isSubagent, isPowerShell: tool === 'PowerShell' })
+    || analyzeExecutedScripts(toolInput.command || '', cwd);
   else reason = analyzeFileTool(tool, toolInput, cwd, { lockOn });
 
   if (reason) {

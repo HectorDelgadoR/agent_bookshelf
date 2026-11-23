@@ -145,6 +145,35 @@ test('locked: source edits still allowed', () =>
   assert.equal(run('Edit', { file_path: 'src/models/book.ts', old_string: 'a', new_string: 'b' }, { cwd: LOCKED }).status, 0));
 test('locked: running tests still allowed', () => assert.equal(bash('npm run test:run', { cwd: LOCKED }).status, 0));
 
+// Write-then-execute bypass (found by an independent review): a script builds the protected path at run time,
+// then a plain `node script.js` runs it. Both halves must be blocked.
+const FROMCHARCODE = "require('fs').rmSync(String.fromCharCode(115,114,99,47,100,98,47,115,101,101,100,46,115,113,108))";
+const BASE64 = "require('fs').unlinkSync(Buffer.from('c3JjL2RiL3NlZWQuc3Fs','base64').toString())";
+const REVERSED = "require('fs').rmSync('lqs.dees/bd/crs'.split('').reverse().join(''))";
+const HEXESC = "require('fs').writeFileSync('src/db/\\x73eed.sql', '')";
+const PY = "import os, base64\nos.remove(base64.b64decode('c3JjL2RiL3NlZWQuc3Fs').decode())";
+for (const [name, content] of [['fromCharCode', FROMCHARCODE], ['base64', BASE64], ['reversed string', REVERSED], ['hex escape', HEXESC], ['python b64decode', PY]]) {
+  test(`blocks Write of a script with a run-time path (${name})`, () =>
+    assert.equal(run('Write', { file_path: 'scripts/c2.js', content }).status, 2));
+}
+const SCRIPTS = mkdtempSync(path.join(tmpdir(), 't2m-scripts-'));
+writeFileSync(path.join(SCRIPTS, 'c2.js'), FROMCHARCODE);
+writeFileSync(path.join(SCRIPTS, 'c3.mjs'), BASE64);
+writeFileSync(path.join(SCRIPTS, 'p.py'), PY);
+writeFileSync(path.join(SCRIPTS, 'benign.js'), "const fs = require('fs'); console.log(fs.readFileSync('package.json', 'utf8').length);");
+writeFileSync(path.join(SCRIPTS, 'tmpdb.js'), "require('fs').unlinkSync('/tmp/test-bookshelf.db');");
+test('blocks running a script that deletes a run-time path: node c2.js', () => assert.equal(bash('node c2.js', { cwd: SCRIPTS }).status, 2));
+test('blocks running it through npx tsx / quotes', () => assert.equal(bash('npx tsx "./c3.mjs"', { cwd: SCRIPTS }).status, 2));
+test('blocks running it with python3', () => assert.equal(bash('python3 p.py', { cwd: SCRIPTS }).status, 2));
+test('allows running a script that only reads', () => { const r = bash('node benign.js', { cwd: SCRIPTS }); assert.equal(r.status, 0, r.stderr); });
+test('allows a script that deletes a temp test DB (test-bookshelf.db is not bookshelf.db)', () => {
+  const r = bash('node tmpdb.js', { cwd: SCRIPTS }); assert.equal(r.status, 0, r.stderr);
+});
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+for (const c of ['npx vitest run tests/search/book-search.api.test.ts', 'npx vitest run tests/search/book-search.html.test.ts tests/search/book-search.model.test.ts', 'npx vitest run tests/db.test.ts', 'node --test ticket-to-merge/hooks/protect.test.mjs']) {
+  test(`allows in the real repo: ${c}`, () => { const r = bash(c, { cwd: REPO_ROOT }); assert.equal(r.status, 0, r.stderr); });
+}
+
 test('fails closed on garbage input', () => {
   const r = spawnSync(process.execPath, [HOOK], { input: '{not json', encoding: 'utf8' });
   assert.equal(r.status, 2);
