@@ -3,17 +3,78 @@
   "base": "main",
   "built_from": "book-101-search + plant.patch, with SPEC.md and CLAUDE.md removed (reviewer must fall back to skills/review-pr/BOOK-101.md, like on a grader branch)",
   "planted": [
-    { "id": "B1", "file": "src/models/book.ts", "line": 52, "category": "security / AC4", "bug": "author clause interpolates the LIKE pattern into the SQL string (only title is bound): SQL injection; any apostrophe -> 500" },
-    { "id": "B2", "file": "src/models/book.ts", "line": 37, "category": "correctness / AC3", "bug": "length check uses >= so a trimmed query of exactly 100 chars is rejected" },
-    { "id": "B3", "file": "src/routes/api.ts", "line": 40, "category": "correctness / AC1", "bug": "GET /books/search registered after /books/:id, so /api/books/search is unreachable (404)" },
-    { "id": "B4", "file": "src/routes/books.ts", "line": 15, "category": "correctness / AC2", "bug": "HTML route returns [] for an empty/blank query instead of all books" },
-    { "id": "B5", "file": "src/views/books/search-results.ejs", "line": 2, "category": "security", "bug": "no-results message renders the query with unescaped <%- %>: reflected XSS" },
-    { "id": "B6", "file": "tests/search/book-search.model.test.ts", "line": 62, "category": "tests / AC5", "bug": "author case-insensitivity test only asserts Array.isArray(result): it can never fail" }
+    {
+      "id": "B1",
+      "file": "src/models/book.ts",
+      "line": 52,
+      "category": "security / AC4",
+      "bug": "author clause interpolates the LIKE pattern into the SQL string (only title is bound): SQL injection; any apostrophe -> 500"
+    },
+    {
+      "id": "B2",
+      "file": "src/models/book.ts",
+      "line": 37,
+      "category": "correctness / AC3",
+      "bug": "length check uses >= so a trimmed query of exactly 100 chars is rejected"
+    },
+    {
+      "id": "B3",
+      "file": "src/routes/api.ts",
+      "line": 40,
+      "category": "correctness / AC1",
+      "bug": "GET /books/search registered after /books/:id, so /api/books/search is unreachable (404)"
+    },
+    {
+      "id": "B4",
+      "file": "src/routes/books.ts",
+      "line": 15,
+      "category": "correctness / AC2",
+      "bug": "HTML route returns [] for an empty/blank query instead of all books"
+    },
+    {
+      "id": "B5",
+      "file": "src/views/books/search-results.ejs",
+      "line": 2,
+      "category": "security",
+      "bug": "no-results message renders the query with unescaped <%- %>: reflected XSS"
+    },
+    {
+      "id": "B6",
+      "file": "tests/search/book-search.model.test.ts",
+      "line": 62,
+      "category": "tests / AC5",
+      "bug": "author case-insensitivity test only asserts Array.isArray(result): it can never fail"
+    }
   ],
   "clean_decoys": [
-    { "file": "src/routes/books.ts", "line": 19, "code": "res.status(400).send(`<p class=\"error\">${err.message}</p>`)", "why_clean": "err.message is one of two fixed strings from SearchQueryError, never user input" },
-    { "file": "src/models/book.ts", "line": 39, "code": "`Search query must be ${MAX_SEARCH_QUERY_LENGTH} characters or fewer`", "why_clean": "template literal over a constant, not SQL" },
-    { "file": "src/models/book.ts", "line": 50, "code": "const pattern = `%${escaped}%`", "why_clean": "builds a bound parameter value (title clause), not SQL text" }
+    {
+      "file": "src/routes/books.ts",
+      "line": 19,
+      "code": "res.status(400).send(`<p class=\"error\">${err.message}</p>`)",
+      "why_clean": "err.message is one of two fixed strings from SearchQueryError, never user input"
+    },
+    {
+      "file": "src/models/book.ts",
+      "line": 39,
+      "code": "`Search query must be ${MAX_SEARCH_QUERY_LENGTH} characters or fewer`",
+      "why_clean": "template literal over a constant, not SQL"
+    },
+    {
+      "file": "src/models/book.ts",
+      "line": 50,
+      "code": "const pattern = `%${escaped}%`",
+      "why_clean": "builds a bound parameter value (title clause), not SQL text"
+    }
   ],
-  "matching_rule": "A finding counts as finding planted bug Bn if it names the same file and the same root cause (line may differ by a few lines). A finding is 'real' if it matches a planted bug or a genuine defect confirmed by reading the code; flagging a decoy is a false positive."
+  "matching_rule": "A finding counts as finding planted bug Bn if it names the same file and the same root cause (line may differ by a few lines). A finding is 'real' if it matches a planted bug or a genuine defect confirmed by reading the code; flagging a decoy is a false positive.",
+  "unplanted_real": [
+    {
+      "id": "B7",
+      "file": "src/routes/books.ts",
+      "line": 19,
+      "category": "correctness / UX",
+      "bug": "the 400 validation-error fragment is never shown: HTMX does not swap 4xx responses by default (present on the base implementation 9cca2b7 too; fixed on book-101-search in 6715d27)",
+      "found_by": "plugin eval run, 2026-11-23"
+    }
+  ]
 }
