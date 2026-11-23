@@ -1,17 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import app from '../../src/server.js';
+import { unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { initDb, closeDb } from '../../src/db/index.js';
 
+// Per-process temp DB: works on Windows (no /tmp) and never collides with a parallel run.
+const TEST_DB_PATH = join(tmpdir(), `test-api-${process.pid}.db`);
+
 beforeEach(async () => {
-  await initDb('/tmp/test-api.db');
+  await initDb(TEST_DB_PATH);
 });
 
 afterEach(() => {
   closeDb();
-  const fs = require('fs');
   try {
-    fs.unlinkSync('/tmp/test-api.db');
+    unlinkSync(TEST_DB_PATH);
   } catch (e) {
     // ignore
   }

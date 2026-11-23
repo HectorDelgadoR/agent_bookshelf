@@ -1,16 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { initDb, closeDb } from '../../src/db/index.js';
 import * as Book from '../../src/models/book.js';
 
+// Per-process temp DB: works on Windows (no /tmp) and never collides with a parallel run.
+const TEST_DB_PATH = join(tmpdir(), `test-book-model-${process.pid}.db`);
+
 beforeEach(async () => {
-  await initDb('/tmp/test-book-model.db');
+  await initDb(TEST_DB_PATH);
 });
 
 afterEach(() => {
   closeDb();
-  const fs = require('fs');
   try {
-    fs.unlinkSync('/tmp/test-book-model.db');
+    unlinkSync(TEST_DB_PATH);
   } catch (e) {
     // ignore
   }

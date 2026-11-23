@@ -62,18 +62,22 @@ Example:
 
 ```typescript
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { initDb, closeDb } from '../../src/db/index.js';
 import * as User from '../../src/models/user.js';
 
-let db;
+// os.tmpdir() works on macOS, Linux and Windows; the pid keeps parallel runs apart.
+const TEST_DB_PATH = join(tmpdir(), `test-user-${process.pid}.db`);
 
-beforeEach(() => {
-  db = initDb('/tmp/test-user.db');
+beforeEach(async () => {
+  await initDb(TEST_DB_PATH);
 });
 
 afterEach(() => {
   closeDb();
-  // cleanup...
+  try { unlinkSync(TEST_DB_PATH); } catch { /* already gone */ }
 });
 
 describe('User Model', () => {
