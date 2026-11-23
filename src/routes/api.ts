@@ -7,10 +7,26 @@ import * as Shelf from '../models/shelf.js';
 const router = Router();
 
 // Books API
+function searchHandler(req: Request, res: Response) {
+  try {
+    res.json(Book.searchBooks(Book.normalizeSearchQuery(req.query.q)));
+  } catch (err) {
+    if (err instanceof Book.SearchQueryError) {
+      return res.status(400).json({ error: err.message });
+    }
+    throw err;
+  }
+}
+
 router.get('/books', (req: Request, res: Response) => {
+  if (req.query.q !== undefined) {
+    return searchHandler(req, res);
+  }
   const books = Book.getAllBooks();
   res.json(books);
 });
+
+router.get('/books/search', searchHandler);
 
 router.get('/books/:id', (req: Request, res: Response) => {
   const bookId = parseInt(req.params.id as string, 10);
