@@ -30,4 +30,14 @@
   </div>
 </div>
 
+<script>
+  // HTMX doesn't swap 4xx responses by default; show the search validation error (400) in the results area.
+  document.body.addEventListener('htmx:beforeSwap', function (evt) {
+    if (evt.detail.xhr.status === 400 && evt.detail.target && evt.detail.target.id === 'search-results') {
+      evt.detail.shouldSwap = true;
+      evt.detail.isError = false;
+    }
+  });
+</script>
+
 <%- include('../partials/footer') %>
