@@ -42,7 +42,7 @@ $ npm run test:run
       Tests  104 passed (104)
 $ npx tsc --noEmit        # clean
 $ node --test ticket-to-merge/hooks/protect.test.mjs
-# pass 84
+# pass 108
 # fail 0
 ```
 90 of the 104 tests are new (`tests/search/`, one `describe` per acceptance criterion, names prefixed `AC1`…`AC4`;
@@ -66,10 +66,14 @@ On Windows the 14 pre-existing tests need `C:\tmp` to exist (they hard-code `/tm
   removed, brace expansion, squashed concatenation (`'s'+'eed.sql'`), globs that could expand to a protected file
   (`se*`, `*.sql`, `bookshelf.d?`), variable/`$(…)` splicing near `.sql/.db/.env`, base64/hex/`rev` decoding,
   destructive verbs near a protected stem (`ls | grep seed | xargs rm`), `git clean -x`, and starting the server
-  (it writes `./bookshelf.db`). Write/Edit content that would write a protected file when run is blocked too,
-  as is any edit to the guardrail itself (`ticket-to-merge/hooks/`, `.claude/settings*.json`).
-  **94-case bypass suite**: `node --test ticket-to-merge/hooks/protect.test.mjs` (48 Bash/PowerShell attacks, 17 must-allow
-  commands incl. read-only git pathspecs, 20 file-tool cases, 8 test-lock cases, 1 garbage-input case).
+  (it writes `./bookshelf.db`). Write/Edit content that would write a protected file when run is blocked too, including
+  code that builds the path at run time (char codes, base64/hex, escapes, reversed strings) next to a file write. When a
+  command runs a local script (`node x.js`, `python x.py`, `npx tsx x.ts`, `./x.sh`…), the script is read and checked
+  the same way before it runs, which closes the two-step "write a script, then run it" bypass. Any edit to the guardrail
+  itself (`ticket-to-merge/hooks/`, `.claude/settings*.json`) is blocked.
+  **108-case bypass suite**: `node --test ticket-to-merge/hooks/protect.test.mjs` (48 Bash/PowerShell attacks,
+  8 write-then-execute attacks, 23 must-allow commands incl. read-only git pathspecs and real test runs, 20 file-tool
+  cases, 8 test-lock cases, 1 garbage-input case).
 - **Second layer**: `.claude/settings.json` `permissions.deny` for the same paths (deny rules also cover `@` references,
   which skip PreToolUse hooks).
 - **Tests read-only while implementing**: `hooks/phase.mjs` sets `.ticket-to-merge/phase`; in `green|review|fix` the
@@ -95,15 +99,18 @@ The verifier earned its place by merging duplicates (9–11 candidates → 6 fin
 wrong line numbers from Haiku; no reviewer flagged a decoy.
 
 ## Cost report
-Measured per agent (tokens reported by each subagent). $ are estimates at list price (Sonnet 5.5 $2/$10, Haiku 5.5
-$0.10/$0.50 per MTok) assuming ~95% input tokens, since per-subagent usage doesn't split input/output or report cache.
+Build and review rows: **estimated** from the tokens each subagent reported, at list price (Sonnet 5.5 $2/$10,
+Haiku 5.5 $0.10/$0.50 per MTok), assuming ~95% input tokens; per-subagent usage doesn't split input/output or report
+cache. The last row is **measured**: the usage report of a real `/ticket-to-merge:review-pr` run
+(`claude -p … --output-format json`).
 
 | Stage | Cost | Cache hit | Models |
 |---|---|---|---|
-| Build (red + green) | $0.44 (183k tok) | n/a¹ | Sonnet: test-writer 108k, implementer 75k |
-| Review (real diff) | $0.38 (157k tok) | n/a¹ | Sonnet: security 77k, correctness 80k; verifier skipped (0 candidates) |
+| Build (red + green) | ~$0.44 est. (183k tok) | n/a¹ | Sonnet: test-writer 108k, implementer 75k |
+| Review (real diff) | ~$0.38 est. (157k tok) | n/a¹ | Sonnet: security 77k, correctness 80k; verifier skipped (0 candidates) |
 | Fix loop | $0.00 | — | none needed (0 findings) |
-| **Total, one ticket** | **$0.82** | | + orchestrator session (read with `/usage`²) |
+| **Total, one ticket** | **~$0.82 est.** | | + orchestrator session (see the measured row)² |
+| Review, measured (live `/review-pr` on the planted-bug branch) | **$0.82** | **84%** orchestrator · **49%** agents | Opus 5.5 orchestrator $0.62 · Sonnet reviewers + verifier $0.20 |
 
 **One lever: cheaper reviewer model.** Specialists Sonnet → Haiku, verifier kept on Sonnet (it guards precision).
 
@@ -158,7 +165,7 @@ hit, Sonnet agents $0.20 at 49%). Details in [RESULTS.md](ticket-to-merge/evals/
 The build stages (red, green, review) and the 3+3 planted-bug runs were driven from a Claude Code session that
 dispatched each stage as a subagent **with the exact agent definition file and model** from `ticket-to-merge/agents/`
 and did the orchestrator's checks (phase switches, red/green verification, diff scoping, commits) itself. The hooks
-were exercised directly: the 94-case bypass suite and a gate test against passing/failing suites.
+were exercised directly: the 108-case bypass suite and a gate test against passing/failing suites.
 
 ## Not done
 - Stretch (+5): neither a learning reviewer nor `claude plugin eval` Δ.

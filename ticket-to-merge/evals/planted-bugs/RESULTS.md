@@ -50,7 +50,7 @@ with their exact definition files (`agents/*.md`) and models; see the README not
 - **First run: returned `[]` (review blocked itself).** The skill's read-only pathspec `':(exclude)ticket-to-merge/**'`
   tripped the guardrail's glob rule. Fixed in `protect.mjs` (protected-file globs only block commands that write;
   `.env` globs still block reads) and in the skill (plain pathspecs, one git command per call). Regression case added
-  to the bypass suite (now 94 cases).
+  to the bypass suite (94 cases at the time; 108 after the write-then-execute fix).
 - **Re-run after the fix: 6/6 planted bugs at the correct lines, 0 false positives** (10 candidates, 4 duplicates
   merged by the verifier). Measured cost $0.82: orchestrating session on Opus 5.5 $0.62 (84% cache hit), reviewer
   and verifier agents on Sonnet $0.20 (49% cache hit). The orchestrator dominates, so the skill's own model is the
