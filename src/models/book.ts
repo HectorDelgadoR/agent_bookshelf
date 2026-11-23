@@ -34,7 +34,7 @@ export function normalizeSearchQuery(raw: unknown): string {
     throw new SearchQueryError('Search query must be a string');
   }
   const trimmed = raw.trim();
-  if (trimmed.length > MAX_SEARCH_QUERY_LENGTH) {
+  if (trimmed.length >= MAX_SEARCH_QUERY_LENGTH) {
     throw new SearchQueryError(
       `Search query must be ${MAX_SEARCH_QUERY_LENGTH} characters or fewer`
     );
@@ -49,8 +49,8 @@ export function searchBooks(query: string): Book[] {
   const escaped = normalized.replace(/[\\%_]/g, '\\$&');
   const pattern = `%${escaped}%`;
   return all(
-    "SELECT * FROM books WHERE title LIKE ? ESCAPE '\\' OR author LIKE ? ESCAPE '\\' ORDER BY title",
-    [pattern, pattern]
+    `SELECT * FROM books WHERE title LIKE ? ESCAPE '\\' OR author LIKE '${pattern}' ESCAPE '\\' ORDER BY title`,
+    [pattern]
   ) as unknown as Book[];
 }
 

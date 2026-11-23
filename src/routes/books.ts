@@ -12,7 +12,7 @@ router.get('/', (req: Request, res: Response) => {
 router.get('/books/search', (req: Request, res: Response) => {
   try {
     const query = Book.normalizeSearchQuery(req.query.q);
-    const books = Book.searchBooks(query);
+    const books = query ? Book.searchBooks(query) : [];
     res.render('books/search-results', { books, query });
   } catch (err) {
     if (err instanceof Book.SearchQueryError) {

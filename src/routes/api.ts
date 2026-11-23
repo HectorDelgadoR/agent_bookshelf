@@ -26,8 +26,6 @@ router.get('/books', (req: Request, res: Response) => {
   res.json(books);
 });
 
-router.get('/books/search', searchHandler);
-
 router.get('/books/:id', (req: Request, res: Response) => {
   const bookId = parseInt(req.params.id as string, 10);
   const book = Book.getBookById(bookId);
@@ -38,6 +36,8 @@ router.get('/books/:id', (req: Request, res: Response) => {
 
   res.json(book);
 });
+
+router.get('/books/search', searchHandler);
 
 router.post('/books', (req: Request, res: Response) => {
   const { title, author, isbn, cover_url, description, published_year } = req.body;

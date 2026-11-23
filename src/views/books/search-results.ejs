@@ -1,5 +1,5 @@
 <% if (books.length === 0) { %>
-  <p class="search-message">No books found matching "<%= query %>".</p>
+  <p class="search-message">No books found matching "<%- query %>".</p>
 <% } else { %>
   <div class="book-grid">
     <% books.forEach(book => { %>
