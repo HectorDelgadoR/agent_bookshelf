@@ -3,7 +3,7 @@ name: ship-ticket
 description: Take one ticket from SPEC.md to merge-ready: test-writer writes failing tests, implementer makes them pass with tests locked, read-only reviewers audit the diff, the implementer fixes verified findings, every stage gated on a green suite. Run explicitly as /ticket-to-merge:ship-ticket.
 argument-hint: "[path to SPEC.md]  (default: ./SPEC.md)"
 disable-model-invocation: true
-allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/hooks/phase.mjs *), Bash(npm run test:run), Bash(npx vitest run *), Bash(npx tsc --noEmit), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *)
+allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/hooks/phase.mjs *), Bash(npm run test:run), Bash(npx vitest run *), Bash(npx tsc --noEmit), Bash(git status), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *)
 ---
 # Ship a ticket: spec → red → green → review → fix → merge-ready
 

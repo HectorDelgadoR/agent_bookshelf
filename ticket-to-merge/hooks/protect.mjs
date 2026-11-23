@@ -12,7 +12,8 @@ import { readFileSync, existsSync, realpathSync, appendFileSync, mkdirSync } fro
 import path from 'node:path';
 
 const PROTECTED_LITERALS = ['seed.sql', 'bookshelf.db'];
-const GLOB_CANDIDATES = ['seed.sql', 'bookshelf.db', 'bookshelf.db-wal', 'bookshelf.db-shm', '.env', '.env.local', 'hooks.json', 'protect.mjs', 'settings.json', 'settings.local.json'];
+const WRITE_GLOB_CANDIDATES = ['seed.sql', 'bookshelf.db', 'bookshelf.db-wal', 'bookshelf.db-shm', 'hooks.json', 'protect.mjs', 'settings.json', 'settings.local.json'];
+const ENV_GLOB_CANDIDATES = ['.env', '.env.local', '.env.production'];
 const SELF_LITERALS = ['protect.mjs', 'hooks.json', '.claude/settings.json', '.claude/settings.local.json', '.claude\\settings'];
 const PHASE_REL = path.join('.ticket-to-merge', 'phase');
 const LOCKED_PHASES = new Set(['green', 'review', 'fix']);
@@ -29,7 +30,7 @@ export function isProtectedBasename(base) {
 }
 
 const ENV_RE = /(^|[\s/\\=<>|;&(:,`])\.env(\.(?!example\b)[a-z0-9_-]+)?(?=$|[\s;&|)<>,/`])/;
-const WRITE_VERB_RE = /(^|[\s;&|(`])(rm|rmdir|mv|cp|dd|tee|truncate|shred|unlink|ln|chmod|chown|touch|install|rsync|xargs|sqlite3|patch|sed\s+(-[a-z]*\s+)*-[a-z]*i|perl\s+-[a-z]*i|git\s+(rm|mv|checkout|restore|reset|clean|stash|apply|am|cherry-pick|revert|merge|rebase|pull))\b|>(?!&|\s*\/dev\/null)/;
+const WRITE_VERB_RE = /\s-(delete|exec|execdir|ok|fprint)\b|(^|[\s;&|(`])(rm|rmdir|mv|cp|dd|tee|truncate|shred|unlink|ln|chmod|chown|touch|install|rsync|xargs|sqlite3|patch|remove-item|set-content|add-content|clear-content|out-file|copy-item|move-item|rename-item|new-item|sed\s+(-[a-z]*\s+)*-[a-z]*i|perl\s+-[a-z]*i|git\s+(rm|mv|checkout|restore|reset|clean|stash|apply|am|cherry-pick|revert|merge|rebase|pull))\b|>(?!&|\s*\/dev\/null)/;
 
 function realish(p) {
   try { return realpathSync(p); } catch { /* not there yet */ }
@@ -81,7 +82,7 @@ export function commandVariants(cmd) {
 }
 
 // ---------- Bash analysis ----------
-export function analyzeBash(cmd, { lockOn = false, isSubagent = false } = {}) {
+export function analyzeBash(cmd, { lockOn = false, isSubagent = false, isPowerShell = false } = {}) {
   const raw = lower(cmd);
   const vars = commandVariants(cmd);
   const unquoted = unquote(cmd);
@@ -105,14 +106,23 @@ export function analyzeBash(cmd, { lockOn = false, isSubagent = false } = {}) {
   for (const v of vars) for (const lit of SELF_LITERALS) if (v.includes(lit)) return `Command references the guardrail configuration (${lit}); it cannot be changed by the agent.`;
 
   // 3. Globs that could expand to a protected file.
-  for (const tokRaw of unquoted.split(/[\s;&|()<>`=]+/)) {
+  //    - A glob that could reach .env is blocked even for reads (secrets). In bash a leading `*`/`?` never
+  //      matches a dotfile, so only patterns that start with "." can; PowerShell wildcards do match dotfiles.
+  //    - A glob that could reach seed.sql / bookshelf.db / the guardrail is blocked only when the command also
+  //      writes. Read-only globs (e.g. git pathspecs like ':(exclude)ticket-to-merge/**') are harmless.
+  const writes = WRITE_VERB_RE.test(unquoted);
+  // Tokenise twice: with backslashes removed (bash escapes) and with backslashes as path separators (Windows paths).
+  const slashed = lower(cmd).replace(/\$(['"])/g, '$1').replace(/['"]/g, '').replace(/\\/g, '/');
+  for (const tokRaw of [...unquoted.split(/[\s;&|()<>`=]+/), ...slashed.split(/[\s;&|()<>`=]+/)]) {
     for (const tok of braceExpand(tokRaw)) {
       if (!/[*?[]/.test(tok) || tok === '[' || tok === '[[') continue;
-      const base = tok.split('/').pop();
+      const base = tok.split(/[\\/]/).pop();
       if (!base) continue;
       let re; try { re = globToRegex(base); } catch { continue; }
-      const hit = GLOB_CANDIDATES.find((c) => re.test(c));
-      if (hit) return `Glob "${tok}" could match protected file "${hit}". Name files explicitly.`;
+      const envHit = ENV_GLOB_CANDIDATES.find((c) => re.test(c) && (isPowerShell || base.startsWith('.')));
+      if (envHit) return `Glob "${tok}" could match protected file "${envHit}". .env must never be read or modified.`;
+      const hit = writes && WRITE_GLOB_CANDIDATES.find((c) => re.test(c));
+      if (hit) return `Glob "${tok}" in a command that writes could match protected file "${hit}". Name files explicitly.`;
     }
   }
 
@@ -202,7 +212,7 @@ function main() {
   const isSubagent = Boolean(input.agent_id || input.agent_type);
 
   let reason = null;
-  if (tool === 'Bash' || tool === 'PowerShell') reason = analyzeBash(toolInput.command || '', { lockOn, isSubagent });
+  if (tool === 'Bash' || tool === 'PowerShell') reason = analyzeBash(toolInput.command || '', { lockOn, isSubagent, isPowerShell: tool === 'PowerShell' });
   else reason = analyzeFileTool(tool, toolInput, cwd, { lockOn });
 
   if (reason) {

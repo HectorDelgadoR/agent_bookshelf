@@ -2,7 +2,7 @@
 name: review-pr
 description: Review a branch or PR diff with read-only specialist reviewers (security, correctness vs the ticket) and an adversarial verifier; returns verified JSON findings {file, line, severity, issue, evidence}. Use to review a PR, a branch, or the review stage of /ticket-to-merge:ship-ticket.
 argument-hint: "[base-ref | PR number]  (default: merge-base with main)"
-allowed-tools: Bash(git diff *), Bash(git merge-base *), Bash(git rev-parse *), Bash(git branch *), Bash(git log *), Bash(git status *), Bash(gh pr diff *), Read, Grep, Glob
+allowed-tools: Bash(git diff *), Bash(git merge-base *), Bash(git rev-parse *), Bash(git branch *), Bash(git log *), Bash(git status), Bash(git status *), Bash(gh pr diff *), Read, Grep, Glob, Agent, Task
 ---
 # Review a diff: specialists, then a verifier
 
@@ -10,12 +10,15 @@ You orchestrate; the reviewers are read-only subagents. Don't edit any file in t
 Arguments: `$ARGUMENTS`
 
 ## 1. Get the diff
+Run each git command as its own Bash call: no `&&`, `||`, `;`, pipes, `$(...)` or shell variables (they stop the
+pre-approved `allowed-tools` patterns from matching). Write the base ref literally into each command.
 - A number → `gh pr diff <n>` (if `gh` is unavailable, say so and fall back to the branch diff).
-- A ref → `BASE=<ref>`.
-- Nothing → `BASE=$(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main || git merge-base HEAD master)`.
-- Run `git diff --unified=8 $BASE...HEAD -- . ':(exclude)package-lock.json' ':(exclude)ticket-to-merge/**' ':(exclude)*.md'`
-  and `git diff --name-only $BASE...HEAD`. If `git status --porcelain` shows uncommitted changes to source files,
-  append `git diff HEAD` for them.
+- A ref → use it as `<base>`.
+- Nothing → `git merge-base HEAD origin/main`; if that fails, `git merge-base HEAD main`; then `git merge-base HEAD master`.
+  Use the printed commit as `<base>`.
+- Run `git diff --name-only <base>...HEAD`, then
+  `git diff --unified=8 <base>...HEAD -- . ':!package-lock.json' ':!ticket-to-merge'`.
+  If `git status --porcelain` shows uncommitted changes to source files, also run `git diff HEAD`.
 - Empty diff → report `[]` and stop.
 
 ## 2. Get the requirements
@@ -25,7 +28,8 @@ Arguments: `$ARGUMENTS`
   acceptable as long as it is consistent and the criteria hold. Tell the reviewers this explicitly.
 
 ## 3. Run the specialists in parallel
-Launch both in ONE message, each with the full diff, the changed-file list and the requirements text:
+Launch both in ONE message, each with the full diff, the changed-file list and the requirements text pasted
+into its prompt (the reviewers have no Bash, so they can't fetch the diff themselves):
 - `ticket-to-merge:review-security`
 - `ticket-to-merge:review-correctness`
 

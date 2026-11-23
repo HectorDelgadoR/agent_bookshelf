@@ -71,8 +71,11 @@ const BLOCK_BASH = [
   "echo '{}' > ticket-to-merge/hooks/hooks.json",
   'rm ticket-to-merge/hooks/protect.mjs',
   'echo {} | tee .claude/settings.local.json',
+  'cat .e*',
+  'head -5 .env*',
+  'cp src/db/s?ed.sql /tmp/x',
 ];
-const BLOCK_PS = ['Get-Content .env', 'Remove-Item src\\db\\seed.sql', 'Set-Content -Path bookshelf.db -Value x'];
+const BLOCK_PS = ['Get-Content .env', 'Remove-Item src\\db\\seed.sql', 'Set-Content -Path bookshelf.db -Value x', 'Get-Content *', 'Remove-Item src\\db\\*.sql'];
 
 const ALLOW_BASH = [
   'npm run test:run',
@@ -87,6 +90,12 @@ const ALLOW_BASH = [
   'cd ../agent_bookshelf && npm run test:run 2>&1 | tail -20',
   'npm run test:run > /dev/null 2>&1; echo $?',
   'node "/plugins/ticket-to-merge/hooks/phase.mjs" green',
+  // Regression: review-pr's own read-only diff was blocked by the glob rule in the first live run.
+  "git diff --unified=8 main...HEAD -- . ':(exclude)package-lock.json' ':(exclude)ticket-to-merge/**' ':(exclude)*.md'",
+  "git diff --unified=8 main...HEAD -- . ':!package-lock.json' ':!ticket-to-merge'",
+  'git diff --name-only main...HEAD',
+  'ls src/**/*.ts',
+  'grep -rn "LIKE" src/*',
 ];
 
 for (const c of BLOCK_BASH) test(`blocks Bash: ${c}`, () => assert.equal(bash(c).status, 2, bash(c).stderr));
